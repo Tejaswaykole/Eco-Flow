@@ -5,10 +5,15 @@ import { randomUUID } from 'crypto';
 
 export class ProductService {
   public static async createCategory(input: CreateCategoryInput, userId: string) {
-    const existing = await prisma.productCategory.findFirst({
+    const existingCode = await prisma.productCategory.findFirst({
       where: { code: input.code.toUpperCase() },
     });
-    if (existing) throw new ConflictError(`Product category code '${input.code}' already exists`);
+    if (existingCode) throw new ConflictError(`Product category code '${input.code}' already exists`);
+
+    const existingName = await prisma.productCategory.findFirst({
+      where: { name: { equals: input.name, mode: 'insensitive' } },
+    });
+    if (existingName) throw new ConflictError(`Product category name '${input.name}' already exists`);
 
     return await prisma.productCategory.create({
       data: {

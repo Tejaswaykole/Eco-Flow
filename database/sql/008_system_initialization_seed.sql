@@ -38,6 +38,39 @@ SELECT
 FROM public.permissions p
 ON CONFLICT DO NOTHING;
 
+-- Associate Permissions to Lead Engineer Role
+INSERT INTO public.role_permissions (id, role_id, permission_id, created_at)
+SELECT 
+  gen_random_uuid(),
+  'a0000000-0000-0000-0000-000000000002',
+  p.id,
+  NOW()
+FROM public.permissions p
+WHERE p.code IN ('eco:create', 'eco:edit', 'eco:submit', 'eco:cancel', 'product:read', 'bom:read', 'bom:write')
+ON CONFLICT DO NOTHING;
+
+-- Associate Permissions to Approver Role
+INSERT INTO public.role_permissions (id, role_id, permission_id, created_at)
+SELECT 
+  gen_random_uuid(),
+  'a0000000-0000-0000-0000-000000000003',
+  p.id,
+  NOW()
+FROM public.permissions p
+WHERE p.code IN ('eco:approve', 'product:read', 'bom:read')
+ON CONFLICT DO NOTHING;
+
+-- Associate Permissions to Operator Role
+INSERT INTO public.role_permissions (id, role_id, permission_id, created_at)
+SELECT 
+  gen_random_uuid(),
+  'a0000000-0000-0000-0000-000000000004',
+  p.id,
+  NOW()
+FROM public.permissions p
+WHERE p.code IN ('product:read', 'bom:read')
+ON CONFLICT DO NOTHING;
+
 -- 4. Seed Initial System Root User (with exactly one primary role to satisfy deferred trigger)
 INSERT INTO public.users (id, email, password_hash, first_name, last_name, status, created_at, updated_at)
 VALUES (

@@ -30,6 +30,36 @@ export class BOMService {
     });
   }
 
+  public static async listBOMs(page: number = 1, limit: number = 50) {
+    const skip = (page - 1) * limit;
+    const [total, boms] = await Promise.all([
+      prisma.bOM.count(),
+      prisma.bOM.findMany({
+        skip,
+        take: limit,
+        orderBy: { created_at: 'desc' },
+        include: {
+          product: {
+            include: {
+              category: true,
+            },
+          },
+          components: true,
+        },
+      }),
+    ]);
+
+    return {
+      data: boms,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
   public static async getBOMById(id: string) {
     const bom = await prisma.bOM.findFirst({
       where: { id },

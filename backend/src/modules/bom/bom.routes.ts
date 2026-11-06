@@ -7,6 +7,7 @@ import { authenticate, requirePermission } from '../../middleware/auth.js';
 const router = Router();
 
 router.post('/', authenticate, requirePermission('bom:write'), validate(createBOMSchema), BOMController.createBOM);
+router.get('/', authenticate, BOMController.listBOMs);
 router.get('/:id', authenticate, BOMController.getBOM);
 router.post('/:id/components', authenticate, requirePermission('bom:write'), validate(addBOMComponentSchema), BOMController.addComponent);
 router.delete('/:id/components/:componentId', authenticate, requirePermission('bom:write'), BOMController.removeComponent);

@@ -26,19 +26,21 @@ export function Header() {
         <div className="h-6 w-px bg-slate-200" />
 
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-semibold text-xs shrink-0">
+          <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-semibold text-xs shrink-0 overflow-hidden">
             {user && (user.firstName || user.lastName) ? (
               `${(user.firstName?.[0] || '').toUpperCase()}${(user.lastName?.[0] || '').toUpperCase()}`
             ) : (
               <User className="w-4 h-4" />
             )}
           </div>
-          <div className="hidden sm:block text-left text-xs whitespace-nowrap">
-            <div className="font-semibold text-slate-900 leading-tight">
-              {user?.firstName || user?.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : user?.email || 'Signed In User'}
+          <div className="hidden sm:flex flex-col text-left text-xs">
+            <div className="font-semibold text-slate-900 leading-tight truncate max-w-[160px]">
+              {user?.firstName && user?.lastName
+                ? `${user.firstName} ${user.lastName}`
+                : user?.firstName || user?.lastName || user?.email || 'Signed In User'}
             </div>
-            <div className="text-slate-500 font-medium capitalize">
-              {user?.roles?.[0]?.replace('_', ' ').toLowerCase() || 'Member'}
+            <div className="text-slate-500 font-medium capitalize text-[11px] leading-tight truncate max-w-[160px]">
+              {user?.roles?.[0] ? user.roles[0].replace(/_/g, ' ').toLowerCase() : 'Member'}
             </div>
           </div>
 

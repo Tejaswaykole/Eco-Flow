@@ -7,7 +7,9 @@ interface BadgeProps {
   className?: string;
 }
 
-export function StatusBadge({ status, className }: { status: ECOStatus | string; className?: string }) {
+export function StatusBadge({ status, className }: { status: ECOStatus | string | undefined | null; className?: string }) {
+  const normalized = status ? String(status) : 'UNKNOWN';
+
   const getColors = (st: string) => {
     switch (st.toUpperCase()) {
       case 'DRAFT':
@@ -34,16 +36,18 @@ export function StatusBadge({ status, className }: { status: ECOStatus | string;
     <span
       className={cn(
         'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border tracking-wide uppercase',
-        getColors(status),
+        getColors(normalized),
         className
       )}
     >
-      {status.replace(/_/g, ' ')}
+      {normalized.replace(/_/g, ' ')}
     </span>
   );
 }
 
-export function PriorityBadge({ priority, className }: { priority: ECOPriority | string; className?: string }) {
+export function PriorityBadge({ priority, className }: { priority: ECOPriority | string | undefined | null; className?: string }) {
+  const normalized = priority ? String(priority) : 'MEDIUM';
+
   const getColors = (p: string) => {
     switch (p.toUpperCase()) {
       case 'LOW':
@@ -63,11 +67,11 @@ export function PriorityBadge({ priority, className }: { priority: ECOPriority |
     <span
       className={cn(
         'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border uppercase tracking-wider',
-        getColors(priority),
+        getColors(normalized),
         className
       )}
     >
-      {priority}
+      {normalized}
     </span>
   );
 }

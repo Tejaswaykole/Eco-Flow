@@ -74,6 +74,12 @@ export class AuthController {
   }
 
   public static async me(req: AuthenticatedRequest, res: Response): Promise<void> {
-    sendSuccess(res, req.user);
+    if (!req.user?.userId) {
+      sendSuccess(res, req.user);
+      return;
+    }
+
+    const user = await AuthService.getProfile(req.user.userId);
+    sendSuccess(res, user);
   }
 }

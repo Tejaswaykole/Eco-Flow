@@ -74,6 +74,13 @@ export const ProductService = {
 };
 
 export const BOMService = {
+  async listBOMs(page = 1, limit = 50) {
+    const res = await apiClient.get<ApiResponse<BOM[]>>('/boms', {
+      params: { page, limit },
+    });
+    return res.data;
+  },
+
   async getBOM(id: string) {
     const res = await apiClient.get<ApiResponse<BOM>>(`/boms/${id}`);
     return res.data.data;

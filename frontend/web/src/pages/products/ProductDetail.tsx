@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ProductService, BOMService } from '../../services';
 import { PageHeader, EmptyState } from '../../components/ui/Cards';
 import { Button } from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badges';
-import { Box, Layers, Plus, ArrowLeft, History, X } from 'lucide-react';
+import { Box, Layers, Plus, ArrowLeft, History, X, ArrowRight } from 'lucide-react';
 import { formatDate } from '../../lib/utils';
 
 export function ProductDetail() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const [isBomModalOpen, setIsBomModalOpen] = useState(false);
@@ -25,11 +26,15 @@ export function ProductDetail() {
 
   const createBomMutation = useMutation({
     mutationFn: BOMService.createBOM,
-    onSuccess: () => {
+    onSuccess: (newBom: any) => {
       queryClient.invalidateQueries({ queryKey: ['product', id] });
+      queryClient.invalidateQueries({ queryKey: ['boms'] });
       setIsBomModalOpen(false);
       setBomNumber('');
       setBomDesc('');
+      if (newBom?.id) {
+        navigate(`/boms/${newBom.id}`);
+      }
     },
     onError: (err: any) => {
       setError(err.response?.data?.error?.message || 'Failed to initialize BOM');
@@ -128,6 +133,74 @@ export function ProductDetail() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Product Associated BOMs */}
+      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <Layers className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-bold text-slate-900">Associated Bills of Materials (BOM)</h3>
+          </div>
+          <Button size="sm" onClick={() => setIsBomModalOpen(true)}>
+            <Plus className="w-4 h-4 mr-1.5" />
+            <span>New BOM</span>
+          </Button>
+        </div>
+
+        {(!product.boms || product.boms.length === 0) ? (
+          <div className="p-6 text-center text-xs text-slate-400">
+            No Bills of Materials defined for this part yet. Click &quot;New BOM&quot; above to initialize an assembly tree.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 text-slate-500 uppercase font-semibold">
+                <tr>
+                  <th className="py-2.5 px-3">BOM Number</th>
+                  <th className="py-2.5 px-3 text-center">Version</th>
+                  <th className="py-2.5 px-3 text-center">Ingredients / Items</th>
+                  <th className="py-2.5 px-3 text-right">Total Cost</th>
+                  <th className="py-2.5 px-3">Status</th>
+                  <th className="py-2.5 px-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {product.boms.map((b: any) => {
+                  const compCount = b.components?.length || 0;
+                  const totalCost = (b.components || []).reduce(
+                    (sum: number, c: any) => sum + Number(c.total_cost || 0),
+                    0
+                  );
+                  return (
+                    <tr key={b.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{b.bom_number}</td>
+                      <td className="py-2.5 px-3 text-center font-mono">v{b.current_version}</td>
+                      <td className="py-2.5 px-3 text-center font-semibold text-emerald-700">
+                        {compCount} components
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                        ${totalCost.toFixed(2)}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <StatusBadge status={b.status} />
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        <Link
+                          to={`/boms/${b.id}`}
+                          className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+                        >
+                          <span>Open Workspace</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Initialize BOM Modal */}

@@ -43,6 +43,7 @@ export interface Product {
   category_id: string;
   category?: ProductCategory;
   product_versions?: ProductVersion[];
+  boms?: BOM[];
   created_at: string;
   updated_at: string;
 }

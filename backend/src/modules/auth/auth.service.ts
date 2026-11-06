@@ -296,4 +296,49 @@ export class AuthService {
       },
     });
   }
+
+  public static async getProfile(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        user_roles: {
+          include: {
+            role: {
+              include: {
+                role_permissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedError('User not found');
+    }
+
+    const roles: string[] = [];
+    const permissions = new Set<string>();
+
+    for (const ur of user.user_roles) {
+      roles.push(ur.role.name);
+      for (const rp of ur.role.role_permissions) {
+        permissions.add(rp.permission.code);
+      }
+    }
+
+    return {
+      id: user.id,
+      userId: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      roles,
+      permissions: Array.from(permissions),
+    };
+  }
 }

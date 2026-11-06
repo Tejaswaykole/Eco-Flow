@@ -100,6 +100,11 @@ export const BOMService = {
     const res = await apiClient.post<ApiResponse<any>>(`/boms/${bomId}/components`, payload);
     return res.data.data;
   },
+
+  async removeComponent(bomId: string, componentId: string) {
+    const res = await apiClient.delete<ApiResponse<any>>(`/boms/${bomId}/components/${componentId}`);
+    return res.data.data;
+  },
 };
 
 export const ECOService = {

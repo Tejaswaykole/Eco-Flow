@@ -26,15 +26,19 @@ export function Header() {
         <div className="h-6 w-px bg-slate-200" />
 
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-semibold text-xs">
-            {user ? `${user.firstName[0]}${user.lastName[0]}` : <User className="w-4 h-4" />}
+          <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-semibold text-xs shrink-0">
+            {user && (user.firstName || user.lastName) ? (
+              `${(user.firstName?.[0] || '').toUpperCase()}${(user.lastName?.[0] || '').toUpperCase()}`
+            ) : (
+              <User className="w-4 h-4" />
+            )}
           </div>
-          <div className="hidden sm:block text-left text-xs">
+          <div className="hidden sm:block text-left text-xs whitespace-nowrap">
             <div className="font-semibold text-slate-900 leading-tight">
-              {user ? `${user.firstName} ${user.lastName}` : 'Signed In User'}
+              {user?.firstName || user?.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : user?.email || 'Signed In User'}
             </div>
             <div className="text-slate-500 font-medium capitalize">
-              {user?.roles?.[0]?.toLowerCase() || 'Member'}
+              {user?.roles?.[0]?.replace('_', ' ').toLowerCase() || 'Member'}
             </div>
           </div>
 
@@ -42,7 +46,7 @@ export function Header() {
             variant="ghost"
             size="sm"
             onClick={logout}
-            className="text-slate-500 hover:text-rose-600 ml-1"
+            className="text-slate-500 hover:text-rose-600 ml-1 shrink-0"
             title="Sign out"
           >
             <LogOut className="w-4 h-4" />

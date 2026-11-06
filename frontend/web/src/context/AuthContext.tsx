@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const profile: UserProfile = {
         id: data.userId || data.id,
         email: data.email,
-        firstName: data.firstName || data.first_name || '',
+        firstName: data.firstName || data.first_name || (data.email ? data.email.split('@')[0] : 'User'),
         lastName: data.lastName || data.last_name || '',
         roles: data.roles || [],
         permissions: data.permissions || [],

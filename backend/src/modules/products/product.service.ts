@@ -54,9 +54,18 @@ export class ProductService {
     });
   }
 
-  public static async listProducts(page = 1, limit = 20, status?: string) {
+  public static async listProducts(page = 1, limit = 20, status?: string, search?: string) {
     const skip = (page - 1) * limit;
-    const where = status ? { status: status as any } : {};
+    const where: any = {};
+    if (status) {
+      where.status = status;
+    }
+    if (search) {
+      where.OR = [
+        { part_number: { contains: search, mode: 'insensitive' } },
+        { name: { contains: search, mode: 'insensitive' } },
+      ];
+    }
 
     const [products, total] = await Promise.all([
       prisma.product.findMany({

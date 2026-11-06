@@ -1,0 +1,33 @@
+{
+  "name": "@ecoflow/validations",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ecoflow/domain-types": "workspace:*",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@ecoflow/tsconfig": "workspace:*",
+    "@types/node": "^22.13.9",
+    "tsup": "^8.4.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.0.8"
+  }
+}

@@ -46,7 +46,7 @@ SELECT
   p.id,
   NOW()
 FROM public.permissions p
-WHERE p.code IN ('eco:create', 'eco:edit', 'eco:submit', 'eco:cancel', 'product:read', 'bom:read', 'bom:write')
+WHERE p.code IN ('eco:create', 'eco:edit', 'eco:submit', 'eco:cancel', 'product:read', 'product:write', 'bom:read', 'bom:write')
 ON CONFLICT DO NOTHING;
 
 -- Associate Permissions to Approver Role

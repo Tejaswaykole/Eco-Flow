@@ -7,6 +7,7 @@ import { Register } from './pages/auth/Register';
 import { Dashboard } from './pages/dashboard/Dashboard';
 import { ProductsList } from './pages/products/ProductsList';
 import { ProductDetail } from './pages/products/ProductDetail';
+import { CategoriesList } from './pages/categories/CategoriesList';
 import { BOMList } from './pages/boms/BOMList';
 import { BOMDetail } from './pages/boms/BOMDetail';
 import { ECOList } from './pages/ecos/ECOList';
@@ -34,6 +35,7 @@ export function App() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="products" element={<ProductsList />} />
         <Route path="products/:id" element={<ProductDetail />} />
+        <Route path="categories" element={<CategoriesList />} />
         <Route path="boms" element={<BOMList />} />
         <Route path="boms/:id" element={<BOMDetail />} />
         <Route path="ecos" element={<ECOList />} />

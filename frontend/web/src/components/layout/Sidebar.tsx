@@ -5,6 +5,7 @@ import { cn } from '../../lib/utils';
 import {
   LayoutDashboard,
   Box,
+  Tag,
   Layers,
   GitPullRequest,
   CheckSquare,
@@ -20,6 +21,7 @@ export function Sidebar() {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, exact: true },
     { name: 'Products', href: '/products', icon: Box },
+    { name: 'Categories', href: '/categories', icon: Tag },
     { name: 'Bills of Materials', href: '/boms', icon: Layers },
     { name: 'Change Orders (ECO)', href: '/ecos', icon: GitPullRequest },
   ];

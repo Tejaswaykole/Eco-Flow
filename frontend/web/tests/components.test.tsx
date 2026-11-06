@@ -47,3 +47,4 @@ describe('ECOFlow Web Components & Utilities Suite', () => {
     expect(btn.hasAttribute('disabled')).toBe(true);
   });
 });
+

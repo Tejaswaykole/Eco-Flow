@@ -82,8 +82,64 @@ export function Login() {
             </Button>
           </form>
 
-          <div className="mt-6 border-t border-slate-100 pt-5 text-center">
-            <span className="text-xs text-slate-500">Need a test account? </span>
+          {/* Quick Demo Credentials Autofill */}
+          <div className="mt-6 border-t border-slate-100 pt-4">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+              Autofill Demo RBAC Accounts
+            </span>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('admin@ecoflow.internal');
+                  setPassword('Password123!');
+                }}
+                className="p-2 text-left rounded-lg border border-slate-200 hover:border-primary hover:bg-slate-50 transition-colors"
+              >
+                <div className="font-semibold text-slate-800">Admin</div>
+                <div className="text-[10px] text-slate-400">ADMINISTRATOR</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('engineer@ecoflow.internal');
+                  setPassword('Password123!');
+                }}
+                className="p-2 text-left rounded-lg border border-slate-200 hover:border-primary hover:bg-slate-50 transition-colors"
+              >
+                <div className="font-semibold text-slate-800">Lead Engineer</div>
+                <div className="text-[10px] text-slate-400">LEAD_ENGINEER</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('approver@ecoflow.internal');
+                  setPassword('Password123!');
+                }}
+                className="p-2 text-left rounded-lg border border-slate-200 hover:border-primary hover:bg-slate-50 transition-colors"
+              >
+                <div className="font-semibold text-slate-800">Approver</div>
+                <div className="text-[10px] text-slate-400">APPROVER</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('operator@ecoflow.internal');
+                  setPassword('Password123!');
+                }}
+                className="p-2 text-left rounded-lg border border-slate-200 hover:border-primary hover:bg-slate-50 transition-colors"
+              >
+                <div className="font-semibold text-slate-800">Operator</div>
+                <div className="text-[10px] text-slate-400">OPERATOR</div>
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 border-t border-slate-100 pt-4 text-center">
+            <span className="text-xs text-slate-500">Need a custom account? </span>
             <Link to="/register" className="text-xs font-semibold text-primary hover:underline">
               Register now
             </Link>
@@ -93,3 +149,4 @@ export function Login() {
     </div>
   );
 }
+

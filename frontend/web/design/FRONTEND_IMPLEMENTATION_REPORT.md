@@ -45,3 +45,4 @@ The application interfaces directly with the ECOFlow Express API backend running
    - Unit and total component costs use strict formatting without floating-point inaccuracies.
 4. **Idempotency Integration**:
    - ECO creation passes client-generated `Idempotency-Key` headers to protect against network duplication.
+

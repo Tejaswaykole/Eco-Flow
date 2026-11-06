@@ -286,3 +286,4 @@ export function BOMDetail() {
     </div>
   );
 }
+

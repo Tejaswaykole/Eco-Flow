@@ -38,3 +38,4 @@
 
 ### 5. Users & Administration
 - `GET /api/v1/users` — User accounts, primary roles, and active statuses (restricted to `ADMINISTRATOR`).
+

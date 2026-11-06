@@ -315,3 +315,4 @@ export function ProductsList() {
     </div>
   );
 }
+

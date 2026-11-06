@@ -35,6 +35,20 @@ export function createApp(): Express {
     app.use(morgan('combined'));
   }
 
+  // Root info endpoint
+  app.get('/', (_req, res) => {
+    res.status(200).json({
+      service: 'ECOFlow Backend API',
+      version: '1.0.0',
+      status: 'healthy',
+      endpoints: {
+        health: '/health',
+        ready: '/ready',
+        api: '/api/v1',
+      },
+    });
+  });
+
   // Health and readiness endpoints
   app.get('/health', (_req, res) => {
     res.status(200).json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });

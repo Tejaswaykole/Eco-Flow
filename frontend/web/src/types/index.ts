@@ -48,11 +48,31 @@ export interface Product {
   updated_at: string;
 }
 
+export type BOMComponentType =
+  | 'RAW_MATERIAL'
+  | 'SUB_ASSEMBLY'
+  | 'HARDWARE'
+  | 'ELECTRONIC'
+  | 'MECHANICAL'
+  | 'ELECTRICAL'
+  | 'OPTICAL'
+  | 'CHEMICAL'
+  | 'FASTENER'
+  | 'PLASTIC_MOLDED'
+  | 'SHEET_METAL'
+  | 'CONSUMABLE'
+  | 'LABEL_PRINTING'
+  | 'CABLE_WIRE'
+  | 'TOOLING'
+  | 'SOFTWARE_FIRMWARE'
+  | 'PACKAGING'
+  | 'OTHER';
+
 export interface BOMComponent {
   id: string;
   part_number: string;
   name: string;
-  component_type: 'RAW_MATERIAL' | 'SUB_ASSEMBLY' | 'HARDWARE' | 'ELECTRONIC' | 'PACKAGING' | 'OTHER';
+  component_type: BOMComponentType;
   quantity: number | string;
   unit_of_measure: string;
   unit_cost: number | string;

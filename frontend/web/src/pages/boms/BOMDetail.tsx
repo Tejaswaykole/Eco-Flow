@@ -20,6 +20,27 @@ import {
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
 
+const COMPONENT_CATEGORIES = [
+  { value: 'RAW_MATERIAL', label: 'Raw Material / Ingredient', group: 'Primary Materials' },
+  { value: 'CHEMICAL', label: 'Chemical / Resin / Adhesive', group: 'Primary Materials' },
+  { value: 'SHEET_METAL', label: 'Sheet Metal & Fabrication', group: 'Structural & Mechanical' },
+  { value: 'PLASTIC_MOLDED', label: 'Plastic Molded / Polymers', group: 'Structural & Mechanical' },
+  { value: 'MECHANICAL', label: 'Mechanical Assembly / Parts', group: 'Structural & Mechanical' },
+  { value: 'HARDWARE', label: 'Hardware / Fasteners / Brackets', group: 'Hardware' },
+  { value: 'FASTENER', label: 'Screws, Bolts, Nuts & Rivets', group: 'Hardware' },
+  { value: 'ELECTRONIC', label: 'Electronic Components (SMD / IC)', group: 'Electrical & Optics' },
+  { value: 'ELECTRICAL', label: 'Electrical (Relays, Switches, Power)', group: 'Electrical & Optics' },
+  { value: 'CABLE_WIRE', label: 'Cables, Wiring & Harnesses', group: 'Electrical & Optics' },
+  { value: 'OPTICAL', label: 'Optics, Display & LEDs', group: 'Electrical & Optics' },
+  { value: 'SUB_ASSEMBLY', label: 'Modular Sub-Assembly', group: 'Assembly & Tooling' },
+  { value: 'TOOLING', label: 'Tooling & Custom Fixtures', group: 'Assembly & Tooling' },
+  { value: 'SOFTWARE_FIRMWARE', label: 'Embedded Software / Firmware', group: 'Digital' },
+  { value: 'CONSUMABLE', label: 'Consumables & Solder', group: 'Finishing & Packaging' },
+  { value: 'LABEL_PRINTING', label: 'Labels, Badges & Printing', group: 'Finishing & Packaging' },
+  { value: 'PACKAGING', label: 'Packaging, Foam & Boxing', group: 'Finishing & Packaging' },
+  { value: 'OTHER', label: 'Other Ancillary Components', group: 'Other' },
+];
+
 export function BOMDetail() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
@@ -343,12 +364,11 @@ export function BOMDetail() {
                     onChange={(e) => setComponentType(e.target.value)}
                     className="mt-1 w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary font-medium"
                   >
-                    <option value="RAW_MATERIAL">RAW MATERIAL / INGREDIENT</option>
-                    <option value="ELECTRONIC">ELECTRONIC</option>
-                    <option value="HARDWARE">HARDWARE / FASTENER</option>
-                    <option value="SUB_ASSEMBLY">SUB ASSEMBLY</option>
-                    <option value="PACKAGING">PACKAGING</option>
-                    <option value="OTHER">OTHER</option>
+                    {COMPONENT_CATEGORIES.map((cat) => (
+                      <option key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -372,8 +392,8 @@ export function BOMDetail() {
                     <label className="block text-xs font-semibold uppercase text-slate-700">Quantity</label>
                     <input
                       type="number"
-                      step="any"
-                      min="0.0001"
+                      step="1"
+                      min="1"
                       required
                       value={quantity}
                       onChange={(e) => setQuantity(Number(e.target.value))}
@@ -392,10 +412,10 @@ export function BOMDetail() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-700">Unit Cost ($)</label>
+                    <label className="block text-xs font-semibold uppercase text-slate-700">Unit Cost (₹)</label>
                     <input
                       type="number"
-                      step="0.0001"
+                      step="1"
                       min="0"
                       required
                       value={unitCost}

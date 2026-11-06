@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@ecoflow/domain-types": "workspace:*",
+    "decimal.js": "^10.6.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {

@@ -1,0 +1,728 @@
+// ECOFlow Prisma Schema
+// Provider: PostgreSQL (Supabase)
+// Architecture Reference: Milestone 2.6 Relational Specification (Corrected Milestone 3.1.1)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ==============================================================================
+// Enums (Reconciled with @ecoflow/domain-types)
+// ==============================================================================
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum ProductCategoryStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum BOMStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum BOMComponentType {
+  RAW_MATERIAL
+  SUB_ASSEMBLY
+  HARDWARE
+  ELECTRONIC
+  PACKAGING
+  OTHER
+}
+
+enum ECOStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  CHANGES_REQUESTED
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum PriorityLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ChangeType {
+  QUANTITY_CHANGE
+  MATERIAL_CHANGE
+  COST_CHANGE
+  COMPONENT_ADDITION
+  COMPONENT_REMOVAL
+  SPECIFICATION_CHANGE
+}
+
+enum ChangeTarget {
+  PRODUCT
+  BOM
+  COMPONENT
+}
+
+enum ImpactType {
+  COST
+  MATERIAL
+  MANUFACTURING
+  QUALITY
+  COMPLIANCE
+}
+
+enum ApprovalDecision {
+  APPROVED
+  REJECTED
+  CHANGES_REQUESTED
+}
+
+enum IdempotencyStatus {
+  PROCESSING
+  COMPLETED
+}
+
+enum VersionReleaseStatus {
+  SCHEDULED
+  RELEASED
+  DEPRECATED
+}
+
+enum AuditSeverity {
+  INFO
+  WARN
+  ERROR
+  CRITICAL
+}
+
+enum NotificationType {
+  ECO_SUBMITTED
+  ECO_APPROVED
+  ECO_REJECTED
+  APPROVAL_REQUESTED
+  SYSTEM_ALERT
+}
+
+// ==============================================================================
+// Identity, Access & Session Management
+// ==============================================================================
+
+model User {
+  id            String     @id @default(uuid()) @db.Uuid
+  email         String     @unique @db.VarChar(255)
+  password_hash String     @db.VarChar(255)
+  first_name    String     @db.VarChar(100)
+  last_name     String     @db.VarChar(100)
+  status        UserStatus @default(PENDING)
+  created_at    DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime   @updatedAt @db.Timestamptz(6)
+
+  // Relationships
+  user_roles            UserRole[]
+  sessions              Session[]
+  refresh_tokens        RefreshToken[]
+  created_ecos          ECO[]               @relation("EcoCreator")
+  assigned_ecos         ECO[]               @relation("EcoAssignee")
+  eco_revisions_created ECORevision[]       @relation("EcoRevisionCreator")
+  eco_comments          ECOComment[]
+  eco_attachments       ECOAttachment[]
+  approvals             Approval[]
+  created_categories    ProductCategory[]   @relation("CategoryCreator")
+  created_products      Product[]           @relation("ProductCreator")
+  created_attachments   ProductAttachment[] @relation("ProductAttachmentCreator")
+  created_boms          BOM[]               @relation("BomCreator")
+  created_product_vers  ProductVersion[]    @relation("ProductVersionCreator")
+  created_bom_vers      BOMVersion[]        @relation("BomVersionCreator")
+  created_releases      VersionRelease[]    @relation("ReleaseCreator")
+  audit_logs            AuditLog[]
+  login_audits          LoginAudit[]
+  notifications         Notification[]
+  idempotency_keys      IdempotencyKey[]
+
+  @@index([email])
+  @@index([status])
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique @db.VarChar(100)
+  description String?  @db.VarChar(255)
+  is_system   Boolean  @default(false)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @updatedAt @db.Timestamptz(6)
+
+  // Relationships
+  user_roles       UserRole[]
+  role_permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique @db.VarChar(100)
+  description String?  @db.VarChar(255)
+  module      String   @db.VarChar(100)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @updatedAt @db.Timestamptz(6)
+
+  // Relationships
+  role_permissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model UserRole {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  role_id    String   @db.Uuid
+  is_primary Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [role_id], references: [id], onDelete: Restrict)
+
+  @@unique([user_id, role_id])
+  @@index([user_id])
+  @@index([role_id])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  id            String   @id @default(uuid()) @db.Uuid
+  role_id       String   @db.Uuid
+  permission_id String   @db.Uuid
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  role       Role       @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permission_id], references: [id], onDelete: Restrict)
+
+  @@unique([role_id, permission_id])
+  @@index([role_id])
+  @@index([permission_id])
+  @@map("role_permissions")
+}
+
+model Session {
+  id             String    @id @default(uuid()) @db.Uuid
+  user_id        String    @db.Uuid
+  ip_address     String?   @db.VarChar(45)
+  user_agent     String?   @db.Text
+  is_revoked     Boolean   @default(false)
+  revoked_at     DateTime? @db.Timestamptz(6)
+  revoked_reason String?   @db.VarChar(255)
+  expires_at     DateTime  @db.Timestamptz(6)
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime  @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  user           User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  refresh_tokens RefreshToken[]
+
+  @@index([user_id])
+  @@index([expires_at])
+  @@index([is_revoked])
+  @@map("sessions")
+}
+
+model RefreshToken {
+  id                   String    @id @default(uuid()) @db.Uuid
+  session_id           String    @db.Uuid
+  user_id              String    @db.Uuid
+  token_hash           String    @unique @db.VarChar(255)
+  token_family         String    @db.Uuid
+  is_consumed          Boolean   @default(false)
+  consumed_at          DateTime? @db.Timestamptz(6)
+  replaced_by_token_id String?   @db.Uuid
+  expires_at           DateTime  @db.Timestamptz(6)
+  created_at           DateTime  @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  session           Session        @relation(fields: [session_id], references: [id], onDelete: Cascade)
+  user              User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  replaced_by_token RefreshToken?  @relation("TokenRotation", fields: [replaced_by_token_id], references: [id], onDelete: SetNull)
+  preceding_tokens  RefreshToken[] @relation("TokenRotation")
+
+  @@index([session_id])
+  @@index([user_id])
+  @@index([token_family])
+  @@index([token_hash])
+  @@map("refresh_tokens")
+}
+
+// ==============================================================================
+// Product Management & Versioning
+// ==============================================================================
+
+model ProductCategory {
+  id          String                @id @default(uuid()) @db.Uuid
+  name        String                @unique @db.VarChar(100)
+  code        String                @unique @db.VarChar(50)
+  description String?               @db.Text
+  status      ProductCategoryStatus @default(ACTIVE)
+  created_by  String                @db.Uuid
+  created_at  DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime              @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  creator  User      @relation("CategoryCreator", fields: [created_by], references: [id], onDelete: Restrict)
+  products Product[]
+
+  @@index([status])
+  @@map("product_categories")
+}
+
+model Product {
+  id              String        @id @default(uuid()) @db.Uuid
+  part_number     String        @unique @db.VarChar(100)
+  name            String        @db.VarChar(255)
+  description     String?       @db.Text
+  category_id     String        @db.Uuid
+  current_version Int           @default(1)
+  status          ProductStatus @default(DRAFT)
+  created_by      String        @db.Uuid
+  created_at      DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime      @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  category         ProductCategory     @relation(fields: [category_id], references: [id], onDelete: Restrict)
+  creator          User                @relation("ProductCreator", fields: [created_by], references: [id], onDelete: Restrict)
+  boms             BOM[]
+  attachments      ProductAttachment[]
+  ecos             ECO[]
+  product_versions ProductVersion[]
+  bom_versions     BOMVersion[]
+  version_releases VersionRelease[]
+
+  @@index([category_id])
+  @@index([status])
+  @@map("products")
+}
+
+model ProductAttachment {
+  id         String   @id @default(uuid()) @db.Uuid
+  product_id String   @db.Uuid
+  file_name  String   @db.VarChar(255)
+  file_path  String   @db.VarChar(500)
+  file_size  BigInt   @db.BigInt
+  mime_type  String   @db.VarChar(100)
+  created_by String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  creator User    @relation("ProductAttachmentCreator", fields: [created_by], references: [id], onDelete: Restrict)
+
+  @@index([product_id])
+  @@map("product_attachments")
+}
+
+// ==============================================================================
+// Bill of Materials (BOM) & Components
+// ==============================================================================
+
+model BOM {
+  id              String    @id @default(uuid()) @db.Uuid
+  bom_number      String    @unique @db.VarChar(100)
+  product_id      String    @db.Uuid
+  current_version Int       @default(1)
+  status          BOMStatus @default(DRAFT)
+  created_by      String    @db.Uuid
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime  @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  product      Product        @relation(fields: [product_id], references: [id], onDelete: Restrict)
+  creator      User           @relation("BomCreator", fields: [created_by], references: [id], onDelete: Restrict)
+  components   BOMComponent[]
+  ecos         ECO[]
+  bom_versions BOMVersion[]   @relation("BomToVersions")
+
+  // Composite candidate key to support composite FK from BOMVersion(bom_id, product_id) and ECO(bom_id, product_id)
+  @@unique([id, product_id])
+  @@index([product_id])
+  @@index([status])
+  @@map("boms")
+}
+
+model BOMComponent {
+  id              String           @id @default(uuid()) @db.Uuid
+  bom_id          String           @db.Uuid
+  part_number     String           @db.VarChar(100)
+  name            String           @db.VarChar(255)
+  component_type  BOMComponentType @default(RAW_MATERIAL)
+  quantity        Decimal          @db.Decimal(12, 4)
+  unit_of_measure String           @db.VarChar(50)
+  unit_cost       Decimal          @db.Decimal(12, 2)
+  total_cost      Decimal          @db.Decimal(14, 2)
+  created_at      DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime         @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  bom BOM @relation(fields: [bom_id], references: [id], onDelete: Cascade)
+
+  @@index([bom_id])
+  @@index([part_number])
+  @@map("bom_components")
+}
+
+// ==============================================================================
+// Engineering Change Orders (ECO) & Revisions
+// ==============================================================================
+
+model ECO {
+  id                  String        @id @default(uuid()) @db.Uuid
+  eco_number          String        @unique @db.VarChar(100)
+  title               String        @db.VarChar(255)
+  description         String?       @db.Text
+  product_id          String        @db.Uuid
+  bom_id              String        @db.Uuid
+  active_revision_no  Int           @default(1)
+  priority            PriorityLevel @default(MEDIUM)
+  status              ECOStatus     @default(DRAFT)
+  effective_date      DateTime?     @db.Timestamptz(6)
+  rejection_reason    String?       @db.Text
+  cancellation_reason String?       @db.Text
+  created_by          String        @db.Uuid
+  assigned_to         String?       @db.Uuid
+  created_at          DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime      @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  product          Product          @relation(fields: [product_id], references: [id], onDelete: Restrict)
+  bom              BOM              @relation(fields: [bom_id, product_id], references: [id, product_id], onDelete: Restrict)
+  creator          User             @relation("EcoCreator", fields: [created_by], references: [id], onDelete: Restrict)
+  assignee         User?            @relation("EcoAssignee", fields: [assigned_to], references: [id], onDelete: SetNull)
+  eco_revisions    ECORevision[]
+  eco_changes      ECOChange[]
+  eco_comments     ECOComment[]
+  eco_attachments  ECOAttachment[]
+  approvals        Approval[]
+  product_versions ProductVersion[]
+  bom_versions     BOMVersion[]
+  version_releases VersionRelease[]
+
+  @@index([product_id])
+  @@index([bom_id])
+  @@index([status])
+  @@index([created_by])
+  @@index([assigned_to])
+  @@map("ecos")
+}
+
+model ECORevision {
+  eco_id          String    @db.Uuid
+  revision_number Int       @default(1)
+  status          ECOStatus @default(DRAFT)
+  change_summary  String    @db.Text
+  created_by      String    @db.Uuid
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime  @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  eco              ECO                  @relation(fields: [eco_id], references: [id], onDelete: Restrict)
+  creator          User                 @relation("EcoRevisionCreator", fields: [created_by], references: [id], onDelete: Restrict)
+  changes          ECOChange[]
+  snapshot         ECORevisionSnapshot?
+  approval         Approval?
+  product_versions ProductVersion[]
+  bom_versions     BOMVersion[]
+
+  @@id([eco_id, revision_number])
+  @@index([created_by])
+  @@index([status])
+  @@map("eco_revisions")
+}
+
+model ECOChange {
+  id              String       @id @default(uuid()) @db.Uuid
+  eco_id          String       @db.Uuid
+  revision_number Int
+  change_type     ChangeType
+  change_target   ChangeTarget @default(COMPONENT)
+  field_name      String       @db.VarChar(100)
+  old_value       String?      @db.Text
+  new_value       String?      @db.Text
+  impact_type     ImpactType   @default(MATERIAL)
+  justification   String?      @db.Text
+  created_at      DateTime     @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  eco      ECO         @relation(fields: [eco_id], references: [id], onDelete: Restrict)
+  revision ECORevision @relation(fields: [eco_id, revision_number], references: [eco_id, revision_number], onDelete: Restrict)
+
+  @@index([eco_id, revision_number])
+  @@index([eco_id])
+  @@map("eco_changes")
+}
+
+model ECORevisionSnapshot {
+  id              String   @id @default(uuid()) @db.Uuid
+  eco_id          String   @db.Uuid
+  revision_number Int
+  snapshot_data   Json     @db.JsonB
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  revision ECORevision @relation(fields: [eco_id, revision_number], references: [eco_id, revision_number], onDelete: Restrict)
+
+  @@unique([eco_id, revision_number])
+  @@map("eco_revision_snapshots")
+}
+
+model ECOComment {
+  id         String   @id @default(uuid()) @db.Uuid
+  eco_id     String   @db.Uuid
+  user_id    String   @db.Uuid
+  comment    String   @db.Text
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  eco  ECO  @relation(fields: [eco_id], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id], onDelete: Restrict)
+
+  @@index([eco_id])
+  @@index([user_id])
+  @@map("eco_comments")
+}
+
+model ECOAttachment {
+  id         String   @id @default(uuid()) @db.Uuid
+  eco_id     String   @db.Uuid
+  file_name  String   @db.VarChar(255)
+  file_path  String   @db.VarChar(500)
+  file_size  BigInt   @db.BigInt
+  mime_type  String   @db.VarChar(100)
+  created_by String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  eco     ECO  @relation(fields: [eco_id], references: [id], onDelete: Cascade)
+  creator User @relation(fields: [created_by], references: [id], onDelete: Restrict)
+
+  @@index([eco_id])
+  @@map("eco_attachments")
+}
+
+// ==============================================================================
+// Approval Workflow
+// ==============================================================================
+
+model Approval {
+  id              String           @id @default(uuid()) @db.Uuid
+  eco_id          String           @db.Uuid
+  revision_number Int
+  approver_id     String           @db.Uuid
+  decision        ApprovalDecision
+  comments        String?          @db.Text
+  decided_at      DateTime         @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  eco      ECO         @relation(fields: [eco_id], references: [id], onDelete: Restrict)
+  revision ECORevision @relation(fields: [eco_id, revision_number], references: [eco_id, revision_number], onDelete: Restrict)
+  approver User        @relation(fields: [approver_id], references: [id], onDelete: Restrict)
+
+  // A single formal decision is allowed per ECO revision
+  @@unique([eco_id, revision_number])
+  @@index([eco_id, revision_number])
+  @@index([approver_id])
+  @@map("approvals")
+}
+
+// ==============================================================================
+// Immutable Versions & Version Releases
+// ==============================================================================
+
+model ProductVersion {
+  id              String   @id @default(uuid()) @db.Uuid
+  product_id      String   @db.Uuid
+  version_number  Int
+  eco_id          String   @db.Uuid
+  revision_number Int
+  snapshot_data   Json     @db.JsonB
+  created_by      String   @db.Uuid
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  product          Product          @relation(fields: [product_id], references: [id], onDelete: Restrict)
+  eco              ECO              @relation(fields: [eco_id], references: [id], onDelete: Restrict)
+  eco_revision     ECORevision      @relation(fields: [eco_id, revision_number], references: [eco_id, revision_number], onDelete: Restrict)
+  creator          User             @relation("ProductVersionCreator", fields: [created_by], references: [id], onDelete: Restrict)
+  version_releases VersionRelease[]
+
+  // Composite candidate key to support composite FK from VersionRelease(product_version_id, product_id)
+  @@unique([id, product_id])
+  @@unique([product_id, version_number])
+  @@index([product_id])
+  @@index([eco_id, revision_number])
+  @@map("product_versions")
+}
+
+model BOMVersion {
+  id              String   @id @default(uuid()) @db.Uuid
+  bom_id          String   @db.Uuid
+  product_id      String   @db.Uuid
+  version_number  Int
+  eco_id          String   @db.Uuid
+  revision_number Int
+  snapshot_data   Json     @db.JsonB
+  created_by      String   @db.Uuid
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  bom              BOM              @relation("BomToVersions", fields: [bom_id, product_id], references: [id, product_id], onDelete: Restrict)
+  product          Product          @relation(fields: [product_id], references: [id], onDelete: Restrict)
+  eco              ECO              @relation(fields: [eco_id], references: [id], onDelete: Restrict)
+  eco_revision     ECORevision      @relation(fields: [eco_id, revision_number], references: [eco_id, revision_number], onDelete: Restrict)
+  creator          User             @relation("BomVersionCreator", fields: [created_by], references: [id], onDelete: Restrict)
+  version_releases VersionRelease[]
+
+  // Composite candidate key to support composite FK from VersionRelease(bom_version_id, product_id)
+  @@unique([id, product_id])
+  @@unique([bom_id, version_number])
+  @@index([bom_id])
+  @@index([product_id])
+  @@index([eco_id, revision_number])
+  @@map("bom_versions")
+}
+
+model VersionRelease {
+  id                 String               @id @default(uuid()) @db.Uuid
+  eco_id             String               @db.Uuid
+  product_id         String               @db.Uuid
+  product_version_id String               @db.Uuid
+  bom_version_id     String               @db.Uuid
+  release_status     VersionReleaseStatus @default(RELEASED)
+  released_by        String               @db.Uuid
+  released_at        DateTime             @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  eco             ECO            @relation(fields: [eco_id], references: [id], onDelete: Restrict)
+  product         Product        @relation(fields: [product_id], references: [id], onDelete: Restrict)
+  product_version ProductVersion @relation(fields: [product_version_id, product_id], references: [id, product_id], onDelete: Restrict)
+  bom_version     BOMVersion     @relation(fields: [bom_version_id, product_id], references: [id, product_id], onDelete: Restrict)
+  releaser        User           @relation("ReleaseCreator", fields: [released_by], references: [id], onDelete: Restrict)
+
+  @@unique([eco_id])
+  @@index([product_id])
+  @@index([product_version_id])
+  @@index([bom_version_id])
+  @@index([released_by])
+  @@map("version_releases")
+}
+
+// ==============================================================================
+// Idempotency & Operation Concurrency
+// ==============================================================================
+
+model IdempotencyKey {
+  id            String            @id @default(uuid()) @db.Uuid
+  scope         String            @db.VarChar(100)
+  key           String            @db.VarChar(255)
+  actor_id      String            @db.Uuid
+  resource_id   String?           @db.VarChar(100)
+  request_hash  String            @db.VarChar(64)
+  status        IdempotencyStatus @default(PROCESSING)
+  response_body Json?             @db.JsonB
+  lease_expires DateTime          @db.Timestamptz(6)
+  claim_token   String            @db.Uuid
+  completed_at  DateTime?         @db.Timestamptz(6)
+  created_at    DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime          @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  actor User @relation(fields: [actor_id], references: [id], onDelete: Restrict)
+
+  @@unique([scope, key])
+  @@index([actor_id])
+  @@index([scope, resource_id])
+  @@index([lease_expires])
+  @@map("idempotency_keys")
+}
+
+// ==============================================================================
+// Auditing & Notifications
+// ==============================================================================
+
+model AuditLog {
+  id          String        @id @default(uuid()) @db.Uuid
+  user_id     String?       @db.Uuid
+  action      String        @db.VarChar(100)
+  entity_type String        @db.VarChar(100)
+  entity_id   String        @db.VarChar(100)
+  old_values  Json?         @db.JsonB
+  new_values  Json?         @db.JsonB
+  severity    AuditSeverity @default(INFO)
+  ip_address  String?       @db.VarChar(45)
+  user_agent  String?       @db.Text
+  created_at  DateTime      @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  user User? @relation(fields: [user_id], references: [id], onDelete: Restrict)
+
+  @@index([entity_type, entity_id])
+  @@index([user_id])
+  @@index([action])
+  @@index([created_at])
+  @@map("audit_logs")
+}
+
+model LoginAudit {
+  id             String   @id @default(uuid()) @db.Uuid
+  user_id        String?  @db.Uuid
+  email_attempt  String   @db.VarChar(255)
+  is_success     Boolean  @default(false)
+  failure_reason String?  @db.VarChar(255)
+  ip_address     String?  @db.VarChar(45)
+  user_agent     String?  @db.Text
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  user User? @relation(fields: [user_id], references: [id], onDelete: Restrict)
+
+  @@index([user_id])
+  @@index([email_attempt])
+  @@index([created_at])
+  @@map("login_audits")
+}
+
+model Notification {
+  id         String           @id @default(uuid()) @db.Uuid
+  user_id    String           @db.Uuid
+  type       NotificationType
+  title      String           @db.VarChar(255)
+  message    String           @db.Text
+  is_read    Boolean          @default(false)
+  read_at    DateTime?        @db.Timestamptz(6)
+  link       String?          @db.VarChar(500)
+  created_at DateTime         @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([is_read])
+  @@map("notifications")
+}

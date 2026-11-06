@@ -5,6 +5,7 @@ import {
   ECOStatus,
   PriorityLevel,
   ChangeType,
+  ChangeTarget,
   ImpactType,
   ApprovalDecision,
 } from '../enums.js';
@@ -135,6 +136,7 @@ export interface ECO {
   ecoNumber: string;
   productId: string;
   bomId: string;
+  activeRevisionNo: number;
   title: string;
   description?: string | null;
   reason?: string | null;
@@ -157,6 +159,7 @@ export interface ECOChange {
   id: string;
   ecoId: string;
   changeType: ChangeType;
+  changeTarget: ChangeTarget;
   fieldName: string;
   oldValue?: string | null;
   newValue?: string | null;

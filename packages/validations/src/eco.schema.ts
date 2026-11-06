@@ -1,20 +1,54 @@
 import { z } from 'zod';
-import { PriorityLevel, ChangeType, ImpactType, ApprovalDecision } from '@ecoflow/domain-types';
+import { PriorityLevel, ChangeType, ChangeTarget, ImpactType, ApprovalDecision } from '@ecoflow/domain-types';
 
-export const ECOChangeSchema = z.object({
-  changeType: z.nativeEnum(ChangeType, {
-    errorMap: () => ({ message: 'Invalid change type specified' }),
-  }),
-  fieldName: z
-    .string({ required_error: 'Field name is required' })
-    .min(1, 'Field name cannot be empty')
-    .max(100, 'Field name cannot exceed 100 characters'),
-  oldValue: z.string().max(1000).nullable().optional(),
-  newValue: z.string().max(1000).nullable().optional(),
-  impactType: z.nativeEnum(ImpactType, {
-    errorMap: () => ({ message: 'Invalid impact type specified' }),
-  }),
-});
+export const ECOChangeSchema = z
+  .object({
+    changeType: z.nativeEnum(ChangeType, {
+      errorMap: () => ({ message: 'Invalid change type specified' }),
+    }),
+    changeTarget: z.nativeEnum(ChangeTarget, {
+      errorMap: () => ({ message: 'Invalid change target specified' }),
+    }).default(ChangeTarget.COMPONENT),
+    fieldName: z
+      .string({ required_error: 'Field name is required' })
+      .min(1, 'Field name cannot be empty')
+      .max(100, 'Field name cannot exceed 100 characters'),
+    oldValue: z.string().max(1000).nullable().optional(),
+    newValue: z.string().max(1000).nullable().optional(),
+    impactType: z.nativeEnum(ImpactType, {
+      errorMap: () => ({ message: 'Invalid impact type specified' }),
+    }),
+  })
+  .superRefine((data, ctx) => {
+    // Validate target compatibility with each ChangeType
+    if (
+      [
+        ChangeType.QUANTITY_CHANGE,
+        ChangeType.COST_CHANGE,
+        ChangeType.MATERIAL_CHANGE,
+        ChangeType.COMPONENT_ADDITION,
+        ChangeType.COMPONENT_REMOVAL,
+      ].includes(data.changeType) &&
+      data.changeTarget !== ChangeTarget.COMPONENT
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['changeTarget'],
+        message: `${data.changeType} requires changeTarget to be COMPONENT`,
+      });
+    }
+
+    if (
+      data.changeType === ChangeType.SPECIFICATION_CHANGE &&
+      data.changeTarget === ChangeTarget.COMPONENT
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['changeTarget'],
+        message: 'SPECIFICATION_CHANGE target must be PRODUCT or BOM',
+      });
+    }
+  });
 
 export const CreateECOSchema = z.object({
   productId: z

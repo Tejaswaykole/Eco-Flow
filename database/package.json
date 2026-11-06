@@ -1,0 +1,14 @@
+{
+  "name": "@ecoflow/database",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prisma:validate": "prisma validate --schema=prisma/schema.prisma",
+    "prisma:format": "prisma format --schema=prisma/schema.prisma",
+    "prisma:generate": "prisma generate --schema=prisma/schema.prisma"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0"
+  }
+}

@@ -31,6 +31,12 @@ export enum ChangeType {
   SPECIFICATION_CHANGE = 'SPECIFICATION_CHANGE',
 }
 
+export enum ChangeTarget {
+  PRODUCT = 'PRODUCT',
+  BOM = 'BOM',
+  COMPONENT = 'COMPONENT',
+}
+
 export enum ImpactType {
   COST = 'COST',
   MATERIAL = 'MATERIAL',

@@ -1,6 +1,12 @@
 packages:
-  - 'apps/*'
+  - 'backend'
+  - 'database'
+  - 'frontend/web'
+  - 'frontend/mobile'
   - 'packages/*'
 
 allowBuilds:
   esbuild: true
+  prisma: true
+  '@prisma/client': true
+  '@prisma/engines': true

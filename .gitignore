@@ -1,42 +1,118 @@
 # Dependencies
 node_modules/
 .pnpm-store/
+.npm/
+.yarn/
 
-# Build outputs
+# Build and Transpilation Outputs
 dist/
 build/
+out/
 .turbo/
 .next/
-out/
+.nuxt/
+*.tsbuildinfo
 
-# Environment and secrets
+# Environment variables, credentials, and secrets
 .env
+.env.*
+!.env.example
+!.env.test.example
+*.env
+*.env.*
+!.env.example
 .env.local
-.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
 *.pem
 *.key
+*.crt
+*.cert
+*.pfx
+*.p12
+*.kdbx
+*.keystore
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+*.id_rsa
+*.id_ed25519
+secrets/
+.secrets/
+credential*
+*credential*
+*.secret*
+token*
+*token*
+*.token
+auth_token*
+jwt_secret*
+service-account*.json
+firebase-adminsdk*.json
+credentials.json
+client_secret*.json
 
-# Logs
+# Database and Local Storage Artifacts
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+postgres-data/
+supabase/.temp/
+.supabase/
+*.dump
+*.sql.gz
+*.backup
+
+# Logs and runtime diagnostics
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 *.log
+logs/
+*.pid
+*.seed
+*.pid.lock
 
-# Editor and OS
+# Test outputs, coverage, and reports
+coverage/
+.nyc_output/
+*.lcov
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# IDE, Editor, and OS files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+[Dd]esktop.ini
 .idea/
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
 
-# Test and Coverage
-coverage/
-.nyc_output/
-
-# Temporary / Scratch / Legacy reference
-legacy-repo/
+# Temporary, scratch, and cache directories
 tmp/
 temp/
-
+legacy-repo/
+scratch/
+.cache/
+.parcel-cache/
+.eslintcache

@@ -179,6 +179,66 @@ importers:
         specifier: ^5.8.2
         version: 5.9.3
 
+  backend:
+    dependencies:
+      '@ecoflow/domain-types':
+        specifier: workspace:*
+        version: link:../packages/domain-types
+      '@ecoflow/validations':
+        specifier: workspace:*
+        version: link:../packages/validations
+      '@prisma/client':
+        specifier: ^5.22.0
+        version: 5.22.0(prisma@5.22.0)
+    devDependencies:
+      '@types/node':
+        specifier: ^22.13.10
+        version: 22.20.5
+      typescript:
+        specifier: ^5.8.2
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.7
+        version: 3.2.7(@types/node@22.20.5)(supports-color@7.2.0)
+
+  database:
+    devDependencies:
+      prisma:
+        specifier: ^5.22.0
+        version: 5.22.0
+
+  frontend/mobile:
+    dependencies:
+      '@ecoflow/domain-types':
+        specifier: workspace:*
+        version: link:../../packages/domain-types
+      '@ecoflow/validations':
+        specifier: workspace:*
+        version: link:../../packages/validations
+    devDependencies:
+      typescript:
+        specifier: ^5.8.2
+        version: 5.9.3
+
+  frontend/web:
+    dependencies:
+      '@ecoflow/domain-types':
+        specifier: workspace:*
+        version: link:../../packages/domain-types
+      '@ecoflow/validations':
+        specifier: workspace:*
+        version: link:../../packages/validations
+    devDependencies:
+      '@types/node':
+        specifier: ^22.13.10
+        version: 22.20.5
+      typescript:
+        specifier: ^5.8.2
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.7
+        version: 3.2.7(@types/node@22.20.5)(supports-color@7.2.0)
+
   packages/domain-types:
     devDependencies:
       '@ecoflow/tsconfig':
@@ -216,6 +276,9 @@ importers:
       '@ecoflow/domain-types':
         specifier: workspace:*
         version: link:../domain-types
+      decimal.js:
+        specifier: ^10.6.0
+        version: 10.6.0
       zod:
         specifier: ^3.24.2
         version: 3.25.76
@@ -621,6 +684,30 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
+  '@prisma/client@5.22.0':
+    resolution: {integrity: sha512-M0SVXfyHnQREBKxCgyo7sffrKttwE6R8PMq330MIUF0pTwjUhLbW84pFDlf06B27XyCR++VtjugEnIHdr07SVA==}
+    engines: {node: '>=16.13'}
+    peerDependencies:
+      prisma: '*'
+    peerDependenciesMeta:
+      prisma:
+        optional: true
+
+  '@prisma/debug@5.22.0':
+    resolution: {integrity: sha512-AUt44v3YJeggO2ZU5BkXI7M4hu9BF2zzH2iF2V5pyXT/lRTyWiElZ7It+bRH1EshoMRxHgpYg4VB6rCM+mG5jQ==}
+
+  '@prisma/engines-version@5.22.0-44.605197351a3c8bdd595af2d2a9bc3025bca48ea2':
+    resolution: {integrity: sha512-2PTmxFR2yHW/eB3uqWtcgRcgAbG1rwG9ZriSvQw+nnb7c4uCr3RAcGMb6/zfE88SKlC1Nj2ziUvc96Z379mHgQ==}
+
+  '@prisma/engines@5.22.0':
+    resolution: {integrity: sha512-UNjfslWhAt06kVL3CjkuYpHAWSO6L4kDCVPegV6itt7nD1kSJavd3vhgAEhjglLJJKEdJ7oIqDJ+yHk6qO8gPA==}
+
+  '@prisma/fetch-engine@5.22.0':
+    resolution: {integrity: sha512-bkrD/Mc2fSvkQBV5EpoFcZ87AvOgDxbG99488a5cexp5Ccny+UM6MAe/UFkUC0wLYD9+9befNOqGiIJhhq+HbA==}
+
+  '@prisma/get-platform@5.22.0':
+    resolution: {integrity: sha512-pHhpQdr1UPFpt+zFfnPazhulaZYCUqeIcPpJViYoq9R+D/yw4fjE+CtnsnKzPYm0ddUbeXUzjGVGIRVgPDCk4Q==}
+
   '@rollup/rollup-android-arm-eabi@4.67.5':
     resolution: {integrity: sha512-FdWPeulkH+FH+rBzyKBD59tuVN4tRKvmVilSJm0OcnoYsQTpd9UhD78OaPcsYqo2fX6hCwAG0YIjrDLoQ3pR3g==}
     cpu: [arm]
@@ -1002,6 +1089,9 @@ packages:
       supports-color:
         optional: true
 
+  decimal.js@10.6.0:
+    resolution: {integrity: sha512-YpgQiITW3JXGntzdUmyUR1V812Hn8T1YVXhCu+wO3OpS4eU9l4YdD3qjyiKdV6mvV29zapkMeD390UVEf2lkUg==}
+
   deep-eql@5.0.2:
     resolution: {integrity: sha512-h5k/5U50IJJFpzfL6nO9jaaumfjO/f2NjK/oYB2Djzm4p9L+3T9qWpZqZ2hAbLPuuYq9wrU08WQyBTL5GbPk5Q==}
     engines: {node: '>=6'}
@@ -1313,6 +1403,11 @@ packages:
   prettier@3.9.10:
     resolution: {integrity: sha512-skGHTH1Yb9QvaTC4hWnRTzEYtCpApF0UMBPz+t/0ZPzP8ihefo/btKd+QA7pUE0fEwA1SbS/NmhyEcstdXOIdA==}
     engines: {node: '>=14'}
+    hasBin: true
+
+  prisma@5.22.0:
+    resolution: {integrity: sha512-vtpjW3XuYCSnMsNVBjLMNkTj6OZbudcPPTPYHqX0CJfpcdWciI1dM8uHETwmDxxiqEwCIE6WvXucWUetJgfu/A==}
+    engines: {node: '>=16.13'}
     hasBin: true
 
   punycode@2.3.1:
@@ -1800,6 +1895,31 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
+  '@prisma/client@5.22.0(prisma@5.22.0)':
+    optionalDependencies:
+      prisma: 5.22.0
+
+  '@prisma/debug@5.22.0': {}
+
+  '@prisma/engines-version@5.22.0-44.605197351a3c8bdd595af2d2a9bc3025bca48ea2': {}
+
+  '@prisma/engines@5.22.0':
+    dependencies:
+      '@prisma/debug': 5.22.0
+      '@prisma/engines-version': 5.22.0-44.605197351a3c8bdd595af2d2a9bc3025bca48ea2
+      '@prisma/fetch-engine': 5.22.0
+      '@prisma/get-platform': 5.22.0
+
+  '@prisma/fetch-engine@5.22.0':
+    dependencies:
+      '@prisma/debug': 5.22.0
+      '@prisma/engines-version': 5.22.0-44.605197351a3c8bdd595af2d2a9bc3025bca48ea2
+      '@prisma/get-platform': 5.22.0
+
+  '@prisma/get-platform@5.22.0':
+    dependencies:
+      '@prisma/debug': 5.22.0
+
   '@rollup/rollup-android-arm-eabi@4.67.5':
     optional: true
 
@@ -2134,6 +2254,8 @@ snapshots:
     optionalDependencies:
       supports-color: 7.2.0
 
+  decimal.js@10.6.0: {}
+
   deep-eql@5.0.2: {}
 
   deep-is@0.1.4: {}
@@ -2462,6 +2584,12 @@ snapshots:
   prelude-ls@1.2.1: {}
 
   prettier@3.9.10: {}
+
+  prisma@5.22.0:
+    dependencies:
+      '@prisma/engines': 5.22.0
+    optionalDependencies:
+      fsevents: 2.3.3
 
   punycode@2.3.1: {}
 

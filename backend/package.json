@@ -1,0 +1,22 @@
+{
+  "name": "@ecoflow/backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ecoflow/domain-types": "workspace:*",
+    "@ecoflow/validations": "workspace:*",
+    "@prisma/client": "^5.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.7"
+  }
+}

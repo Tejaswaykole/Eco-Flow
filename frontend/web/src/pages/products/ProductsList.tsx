@@ -12,15 +12,12 @@ export function ProductsList() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 
   // Form states
   const [partNumber, setPartNumber] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [catName, setCatName] = useState('');
-  const [catCode, setCatCode] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const { data: productsData, isLoading } = useQuery({
@@ -48,19 +45,6 @@ export function ProductsList() {
     },
   });
 
-  const createCategoryMutation = useMutation({
-    mutationFn: ProductService.createCategory,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-      setIsCategoryOpen(false);
-      setCatName('');
-      setCatCode('');
-    },
-    onError: (err: any) => {
-      setError(err.response?.data?.error?.message || 'Failed to create category');
-    },
-  });
-
   const products = productsData?.data || [];
 
   return (
@@ -69,10 +53,6 @@ export function ProductsList() {
         title="Products & Engineering Catalog"
         description="Master product records, revisions, and release lifecycles."
       >
-        <Button variant="outline" size="sm" onClick={() => setIsCategoryOpen(true)}>
-          <Tag className="w-4 h-4 mr-1.5" />
-          <span>New Category</span>
-        </Button>
         <Button size="sm" onClick={() => setIsCreateOpen(true)}>
           <Plus className="w-4 h-4 mr-1.5" />
           <span>New Product</span>
@@ -245,67 +225,6 @@ export function ProductsList() {
                 </Button>
                 <Button size="sm" type="submit" isLoading={createProductMutation.isPending}>
                   Create Product
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Create Category Modal */}
-      {isCategoryOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-900">Add Product Category</h3>
-              <button onClick={() => setIsCategoryOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                setError(null);
-                createCategoryMutation.mutate({
-                  name: catName,
-                  code: catCode,
-                });
-              }}
-              className="space-y-4 mt-4"
-            >
-              {error && <div className="text-xs text-rose-600 bg-rose-50 p-2.5 rounded-lg border border-rose-200">{error}</div>}
-
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-700">Category Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Power Modules"
-                  value={catName}
-                  onChange={(e) => setCatName(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-700">Category Code</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="PWR"
-                  value={catCode}
-                  onChange={(e) => setCatCode(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-                <Button variant="outline" size="sm" type="button" onClick={() => setIsCategoryOpen(false)}>
-                  Cancel
-                </Button>
-                <Button size="sm" type="submit" isLoading={createCategoryMutation.isPending}>
-                  Add Category
                 </Button>
               </div>
             </form>

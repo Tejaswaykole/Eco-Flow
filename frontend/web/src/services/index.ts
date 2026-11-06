@@ -66,6 +66,11 @@ export const ProductService = {
     const res = await apiClient.post<ApiResponse<ProductCategory>>('/products/categories', payload);
     return res.data.data;
   },
+
+  async updateCategory(id: string, payload: { name?: string; description?: string; status?: string }) {
+    const res = await apiClient.patch<ApiResponse<ProductCategory>>(`/products/categories/${id}`, payload);
+    return res.data.data;
+  },
 };
 
 export const BOMService = {

@@ -4,19 +4,22 @@ import { ProductService } from '../../services';
 import { PageHeader, EmptyState } from '../../components/ui/Cards';
 import { Button } from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badges';
-import { Tag, Plus, X, Search } from 'lucide-react';
+import { Tag, Plus, X, Search, Edit2 } from 'lucide-react';
 import { formatDate } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
 
 export function CategoriesList() {
   const queryClient = useQueryClient();
-  const { hasPermission, hasRole } = useAuth();
+  const { user, hasPermission, hasRole } = useAuth();
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<any | null>(null);
 
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [description, setDescription] = useState('');
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const { data: categories = [], isLoading } = useQuery({
@@ -38,7 +41,30 @@ export function CategoriesList() {
     },
   });
 
+  const updateCategoryMutation = useMutation({
+    mutationFn: (payload: { id: string; name: string; description?: string }) =>
+      ProductService.updateCategory(payload.id, {
+        name: payload.name,
+        description: payload.description,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      setEditingCategory(null);
+      setEditName('');
+      setEditDescription('');
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.error?.message || 'Failed to update category');
+    },
+  });
+
   const canCreate = hasPermission('product:write') || hasRole('LEAD_ENGINEER') || hasRole('ADMINISTRATOR');
+
+  const canEdit = (cat: any) => {
+    if (!user) return false;
+    if (hasRole('ADMINISTRATOR')) return true;
+    return cat.created_by === user.id;
+  };
 
   const filteredCategories = categories.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -97,7 +123,9 @@ export function CategoriesList() {
                   <th className="py-3 px-4">Code</th>
                   <th className="py-3 px-4">Category Name</th>
                   <th className="py-3 px-4">Description</th>
+                  <th className="py-3 px-4">Author / Owner</th>
                   <th className="py-3 px-4">Created Date</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -112,7 +140,33 @@ export function CategoriesList() {
                     <td className="py-3.5 px-4 text-slate-500 max-w-md truncate">
                       {cat.description || '—'}
                     </td>
+                    <td className="py-3.5 px-4 text-slate-600 font-medium">
+                      {cat.creator ? `${cat.creator.first_name} ${cat.creator.last_name}` : 'System'}
+                      {cat.created_by === user?.id && (
+                        <span className="ml-1.5 px-1.5 py-0.5 rounded text-[10px] bg-teal-50 text-teal-700 border border-teal-200 font-semibold">
+                          You
+                        </span>
+                      )}
+                    </td>
                     <td className="py-3.5 px-4 text-slate-500">{formatDate(cat.created_at)}</td>
+                    <td className="py-3.5 px-4 text-right">
+                      {canEdit(cat) ? (
+                        <button
+                          onClick={() => {
+                            setEditingCategory(cat);
+                            setEditName(cat.name);
+                            setEditDescription(cat.description || '');
+                            setError(null);
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 text-xs font-semibold transition-colors"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 italic">Read-only</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -193,6 +247,69 @@ export function CategoriesList() {
           </div>
         </div>
       )}
+
+      {/* Edit Category Modal */}
+      {editingCategory && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Edit Category</h3>
+                <span className="text-xs text-slate-400 font-mono">Code: {editingCategory.code}</span>
+              </div>
+              <button onClick={() => setEditingCategory(null)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setError(null);
+                updateCategoryMutation.mutate({
+                  id: editingCategory.id,
+                  name: editName,
+                  description: editDescription,
+                });
+              }}
+              className="space-y-4 mt-4"
+            >
+              {error && <div className="text-xs text-rose-600 bg-rose-50 p-2.5 rounded-lg border border-rose-200">{error}</div>}
+
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-700">Category Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="mt-1 w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-700">Description</label>
+                <textarea
+                  rows={3}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="mt-1 w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                <Button variant="outline" size="sm" type="button" onClick={() => setEditingCategory(null)}>
+                  Cancel
+                </Button>
+                <Button size="sm" type="submit" isLoading={updateCategoryMutation.isPending}>
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

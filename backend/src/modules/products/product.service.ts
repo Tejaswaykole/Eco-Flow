@@ -1,5 +1,5 @@
 import { prisma } from '../../config/database.js';
-import { NotFoundError, ConflictError } from '../../utils/errors.js';
+import { NotFoundError, ConflictError, ForbiddenError } from '../../utils/errors.js';
 import { CreateCategoryInput, UpdateCategoryInput, CreateProductInput, UpdateProductInput } from './product.schema.js';
 import { randomUUID } from 'crypto';
 
@@ -29,6 +29,61 @@ export class ProductService {
   public static async listCategories() {
     return await prisma.productCategory.findMany({
       orderBy: { name: 'asc' },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            first_name: true,
+            last_name: true,
+            email: true,
+          },
+        },
+      },
+    });
+  }
+
+  public static async updateCategory(
+    id: string,
+    input: UpdateCategoryInput,
+    userId: string,
+    userRoles: string[] = []
+  ) {
+    const category = await prisma.productCategory.findUnique({
+      where: { id },
+    });
+    if (!category) throw new NotFoundError('Product Category', id);
+
+    const isAdmin = userRoles.includes('ADMINISTRATOR');
+    const isOwner = category.created_by === userId;
+
+    if (!isAdmin && !isOwner) {
+      throw new ForbiddenError('You can only modify categories that you created');
+    }
+
+    if (input.name && input.name.toLowerCase() !== category.name.toLowerCase()) {
+      const existingName = await prisma.productCategory.findFirst({
+        where: { name: { equals: input.name, mode: 'insensitive' } },
+      });
+      if (existingName) throw new ConflictError(`Product category name '${input.name}' already exists`);
+    }
+
+    return await prisma.productCategory.update({
+      where: { id },
+      data: {
+        ...(input.name && { name: input.name }),
+        ...(input.description !== undefined && { description: input.description }),
+        ...(input.status && { status: input.status as any }),
+      },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            first_name: true,
+            last_name: true,
+            email: true,
+          },
+        },
+      },
     });
   }
 

@@ -22,6 +22,21 @@ export class ProductController {
     }
   }
 
+  public static async updateCategory(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const category = await ProductService.updateCategory(
+        id!,
+        req.body,
+        req.user!.userId,
+        req.user!.roles
+      );
+      sendSuccess(res, category, 'Product category updated successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   public static async createProduct(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const product = await ProductService.createProduct(req.body, req.user!.userId);

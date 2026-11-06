@@ -14,6 +14,14 @@ export interface ProductCategory {
   name: string;
   code: string;
   description?: string;
+  status?: string;
+  created_by?: string;
+  creator?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
   created_at: string;
 }
 

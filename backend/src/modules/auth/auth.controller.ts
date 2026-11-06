@@ -74,6 +74,6 @@ export class AuthController {
   }
 
   public static async me(req: AuthenticatedRequest, res: Response): Promise<void> {
-    sendSuccess(res, { user: req.user });
+    sendSuccess(res, req.user);
   }
 }

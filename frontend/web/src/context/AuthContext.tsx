@@ -28,7 +28,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const profile = await AuthService.getMe();
+      const data: any = await AuthService.getMe();
+      const profile: UserProfile = {
+        id: data.userId || data.id,
+        email: data.email,
+        firstName: data.firstName || data.first_name || '',
+        lastName: data.lastName || data.last_name || '',
+        roles: data.roles || [],
+        permissions: data.permissions || [],
+      };
       setUser(profile);
     } catch (err) {
       setUser(null);
@@ -87,12 +95,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const hasRole = (role: RoleName): boolean => {
-    if (!user) return false;
+    if (!user || !user.roles) return false;
     return user.roles.includes(role);
   };
 
   const hasPermission = (permission: string): boolean => {
-    if (!user) return false;
+    if (!user || !user.permissions) return false;
     if (user.permissions.includes('admin:all')) return true;
     return user.permissions.includes(permission);
   };

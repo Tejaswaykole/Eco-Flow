@@ -22,7 +22,7 @@ import {
   Clock,
   ArrowUpRight,
 } from 'lucide-react';
-import { formatCurrency, formatDate } from '../../lib/utils';
+import { formatCurrency, formatDate, formatDateTime } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
 
 const COMPONENT_CATEGORIES = [
@@ -314,7 +314,10 @@ export function BOMDetail() {
                             ({userRole.toLowerCase()})
                           </span>
                         </div>
-                        <span className="text-slate-400 font-mono text-[11px]">{formatDate(h.created_at)}</span>
+                        <div className="flex items-center gap-1.5 text-slate-500 font-mono text-[11px] bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200 shrink-0">
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          <span>{formatDateTime(h.created_at)}</span>
+                        </div>
                       </div>
 
                       {/* Detail diff */}

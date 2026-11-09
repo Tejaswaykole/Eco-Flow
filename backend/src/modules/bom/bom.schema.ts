@@ -38,3 +38,35 @@ export const addBOMComponentSchema = z.object({
 
 export type CreateBOMInput = z.infer<typeof createBOMSchema>;
 export type AddBOMComponentInput = z.infer<typeof addBOMComponentSchema>;
+
+export const updateBOMComponentSchema = z.object({
+  partNumber: z.string().min(1).max(100).optional(),
+  name: z.string().min(1).max(255).optional(),
+  componentType: z.enum([
+    'RAW_MATERIAL',
+    'SUB_ASSEMBLY',
+    'HARDWARE',
+    'ELECTRONIC',
+    'MECHANICAL',
+    'ELECTRICAL',
+    'OPTICAL',
+    'CHEMICAL',
+    'FASTENER',
+    'PLASTIC_MOLDED',
+    'SHEET_METAL',
+    'CONSUMABLE',
+    'LABEL_PRINTING',
+    'CABLE_WIRE',
+    'TOOLING',
+    'SOFTWARE_FIRMWARE',
+    'PACKAGING',
+    'OTHER',
+  ]).optional(),
+  quantity: z.number().positive().optional(),
+  unitOfMeasure: z.string().min(1).max(20).optional(),
+  unitCost: z.number().nonnegative().optional(),
+  materialType: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export type UpdateBOMComponentInput = z.infer<typeof updateBOMComponentSchema>;

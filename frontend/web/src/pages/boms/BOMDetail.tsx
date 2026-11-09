@@ -16,6 +16,11 @@ import {
   DollarSign,
   Calculator,
   FileSpreadsheet,
+  History,
+  Edit2,
+  User,
+  Clock,
+  ArrowUpRight,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
@@ -57,9 +62,18 @@ export function BOMDetail() {
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  const [editingComponent, setEditingComponent] = useState<any | null>(null);
+  const [activeTab, setActiveTab] = useState<'items' | 'history'>('items');
+
   const { data: bom, isLoading } = useQuery({
     queryKey: ['bom', id],
     queryFn: () => BOMService.getBOM(id!),
+    enabled: !!id,
+  });
+
+  const { data: history = [], isLoading: isHistoryLoading } = useQuery({
+    queryKey: ['bom-history', id],
+    queryFn: () => BOMService.getBOMHistory(id!),
     enabled: !!id,
   });
 
@@ -67,6 +81,7 @@ export function BOMDetail() {
     mutationFn: (payload: any) => BOMService.addComponent(id!, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bom', id] });
+      queryClient.invalidateQueries({ queryKey: ['bom-history', id] });
       setIsComponentModalOpen(false);
       setPartNumber('');
       setName('');
@@ -81,10 +96,24 @@ export function BOMDetail() {
     },
   });
 
+  const updateComponentMutation = useMutation({
+    mutationFn: ({ componentId, payload }: { componentId: string; payload: any }) =>
+      BOMService.updateComponent(id!, componentId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bom', id] });
+      queryClient.invalidateQueries({ queryKey: ['bom-history', id] });
+      setEditingComponent(null);
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.error?.message || 'Failed to update component');
+    },
+  });
+
   const removeComponentMutation = useMutation({
     mutationFn: (componentId: string) => BOMService.removeComponent(id!, componentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bom', id] });
+      queryClient.invalidateQueries({ queryKey: ['bom-history', id] });
     },
     onError: (err: any) => {
       alert(err.response?.data?.error?.message || 'Failed to delete component');
@@ -206,15 +235,129 @@ export function BOMDetail() {
         </div>
       )}
 
-      {/* Main Assembly Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900">Components & Recipe Ingredients</h3>
-            <p className="text-xs text-slate-500">Live cost aggregation, specifications, and engineering notes</p>
+      {/* Tabs navigation: Assembly Structure vs Audit History */}
+      <div className="flex items-center gap-2 border-b border-slate-200">
+        <button
+          onClick={() => setActiveTab('items')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
+            activeTab === 'items'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          <span>Components & Recipe Items ({components.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('history')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
+            activeTab === 'history'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <History className="w-4 h-4" />
+          <span>Change History & Audit Trail ({history.length})</span>
+        </button>
+      </div>
+
+      {activeTab === 'history' ? (
+        /* Audit History View */
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Engineering Audit & Modification Log</h3>
+              <p className="text-xs text-slate-500">Every change made to this Bill of Materials by engineers or administrators</p>
+            </div>
+            <span className="text-xs text-slate-400 font-mono">Immutable Log</span>
           </div>
-          <span className="text-xs text-slate-400 font-mono">Decimal Precision Accounting</span>
+
+          {isHistoryLoading ? (
+            <div className="p-8 text-center text-xs text-slate-400">Loading audit log...</div>
+          ) : history.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-400">
+              No modifications recorded yet. Any addition, modification, or removal of components will be tracked here.
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {history.map((h: any) => {
+                const userFullName = h.user
+                  ? `${h.user.first_name || ''} ${h.user.last_name || ''}`.trim() || h.user.email
+                  : 'System User';
+                const userRole = h.user?.user_roles?.[0]?.role?.name?.replace(/_/g, ' ') || 'ENGINEER';
+                const oldVals = h.old_values || {};
+                const newVals = h.new_values || {};
+
+                return (
+                  <div key={h.id} className="p-4 hover:bg-slate-50/70 transition-colors flex items-start gap-4 text-xs">
+                    <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 mt-0.5">
+                      <Clock className="w-4 h-4 text-slate-600" />
+                    </div>
+
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                              h.action === 'BOM_COMPONENT_ADDED'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : h.action === 'BOM_COMPONENT_MODIFIED'
+                                ? 'bg-sky-50 text-sky-700 border border-sky-200'
+                                : 'bg-rose-50 text-rose-700 border border-rose-200'
+                            }`}
+                          >
+                            {h.action.replace('BOM_', '').replace(/_/g, ' ')}
+                          </span>
+                          <span className="font-semibold text-slate-800">{userFullName}</span>
+                          <span className="text-[10px] text-slate-400 font-medium capitalize">
+                            ({userRole.toLowerCase()})
+                          </span>
+                        </div>
+                        <span className="text-slate-400 font-mono text-[11px]">{formatDate(h.created_at)}</span>
+                      </div>
+
+                      {/* Detail diff */}
+                      <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 font-mono text-[11px] mt-1 space-y-1">
+                        {h.action === 'BOM_COMPONENT_ADDED' && (
+                          <div className="text-emerald-700">
+                            + Added <span className="font-bold">{newVals.partNumber}</span> ({newVals.name}): {newVals.quantity} {newVals.unitOfMeasure} @ {formatCurrency(newVals.unitCost)} = {formatCurrency(newVals.totalCost)} [{newVals.componentType}]
+                          </div>
+                        )}
+                        {h.action === 'BOM_COMPONENT_REMOVED' && (
+                          <div className="text-rose-700">
+                            - Removed <span className="font-bold">{oldVals.partNumber}</span> ({oldVals.name}): {oldVals.quantity} {oldVals.unitOfMeasure} @ {formatCurrency(oldVals.unitCost)}
+                          </div>
+                        )}
+                        {h.action === 'BOM_COMPONENT_MODIFIED' && (
+                          <div className="space-y-1">
+                            <div className="text-slate-700 font-bold">{newVals.partNumber} ({newVals.name}):</div>
+                            <div className="text-slate-500 line-through">
+                              Old: {oldVals.quantity} {oldVals.unitOfMeasure} @ {formatCurrency(oldVals.unitCost)} = {formatCurrency(oldVals.totalCost)} [{oldVals.componentType}]
+                            </div>
+                            <div className="text-teal-700 font-semibold">
+                              New: {newVals.quantity} {newVals.unitOfMeasure} @ {formatCurrency(newVals.unitCost)} = {formatCurrency(newVals.totalCost)} [{newVals.componentType}]
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
+      ) : (
+        /* Main Assembly Table */
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Components & Recipe Ingredients</h3>
+              <p className="text-xs text-slate-500">Live cost aggregation, specifications, and engineering notes</p>
+            </div>
+            <span className="text-xs text-slate-400 font-mono">Decimal Precision Accounting</span>
+          </div>
 
         {components.length === 0 ? (
           <EmptyState
@@ -291,17 +434,36 @@ export function BOMDetail() {
                       </td>
                       {canEdit && (
                         <td className="py-3.5 px-4 text-right align-top">
-                          <button
-                            onClick={() => {
-                              if (confirm(`Remove component ${comp.part_number} from draft BOM?`)) {
-                                removeComponentMutation.mutate(comp.id);
-                              }
-                            }}
-                            className="p-1 text-slate-400 hover:text-rose-600 transition-colors rounded"
-                            title="Remove line item"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => {
+                                setEditingComponent(comp);
+                                setPartNumber(comp.part_number);
+                                setName(comp.name);
+                                setComponentType(comp.component_type);
+                                setQuantity(Number(comp.quantity));
+                                setUnitCost(Number(comp.unit_cost));
+                                setUnitOfMeasure(comp.unit_of_measure || 'PCS');
+                                setNotes(comp.notes || '');
+                                setError(null);
+                              }}
+                              className="p-1 text-slate-400 hover:text-primary transition-colors rounded hover:bg-slate-100"
+                              title="Edit line item"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm(`Remove component ${comp.part_number} from draft BOM?`)) {
+                                  removeComponentMutation.mutate(comp.id);
+                                }
+                              }}
+                              className="p-1 text-slate-400 hover:text-rose-600 transition-colors rounded hover:bg-slate-100"
+                              title="Remove line item"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       )}
                     </tr>
@@ -312,6 +474,156 @@ export function BOMDetail() {
           </div>
         )}
       </div>
+      )}
+
+      {/* Edit Component Modal */}
+      {editingComponent && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Edit BOM Ingredient / Component</h3>
+                <span className="text-xs text-slate-400">Modifications will be tracked in the Audit History</span>
+              </div>
+              <button onClick={() => setEditingComponent(null)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setError(null);
+                updateComponentMutation.mutate({
+                  componentId: editingComponent.id,
+                  payload: {
+                    partNumber,
+                    name,
+                    componentType,
+                    quantity: Number(quantity),
+                    unitCost: Number(unitCost),
+                    unitOfMeasure,
+                    notes: notes || undefined,
+                  },
+                });
+              }}
+              className="space-y-4 mt-4"
+            >
+              {error && <div className="text-xs text-rose-600 bg-rose-50 p-2.5 rounded-lg border border-rose-200">{error}</div>}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-700">Part / Item #</label>
+                  <input
+                    type="text"
+                    required
+                    value={partNumber}
+                    onChange={(e) => setPartNumber(e.target.value)}
+                    className="mt-1 w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary font-mono uppercase"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-700">Category / Type</label>
+                  <select
+                    value={componentType}
+                    onChange={(e) => setComponentType(e.target.value)}
+                    className="mt-1 w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary font-medium"
+                  >
+                    {COMPONENT_CATEGORIES.map((cat) => (
+                      <option key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-700">Component / Ingredient Name</label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="mt-1 w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              {/* Quantity, Cost & Live Subtotal Row */}
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-700">Quantity</label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="1"
+                      required
+                      value={quantity}
+                      onChange={(e) => setQuantity(Number(e.target.value))}
+                      className="mt-1 w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-700">Unit of Measure</label>
+                    <input
+                      type="text"
+                      required
+                      value={unitOfMeasure}
+                      onChange={(e) => setUnitOfMeasure(e.target.value.toUpperCase())}
+                      className="mt-1 w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary uppercase font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-700">Unit Cost (₹)</label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      required
+                      value={unitCost}
+                      onChange={(e) => setUnitCost(Number(e.target.value))}
+                      className="mt-1 w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-200 text-xs">
+                  <span className="font-semibold text-slate-600 flex items-center gap-1.5">
+                    <Calculator className="w-3.5 h-3.5 text-primary" />
+                    <span>Calculated Extended Total:</span>
+                  </span>
+                  <span className="font-mono font-bold text-sm text-emerald-700">
+                    {formatCurrency(liveSubtotal)}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-700">
+                  Engineering Notes / Impact Details
+                </label>
+                <textarea
+                  rows={2}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Material grade, supplier tolerance, substitution impact, or manufacturing note..."
+                  className="mt-1 w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                <Button variant="outline" size="sm" type="button" onClick={() => setEditingComponent(null)}>
+                  Cancel
+                </Button>
+                <Button size="sm" type="submit" isLoading={updateComponentMutation.isPending}>
+                  Save Changes & Record Audit
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Add Component / Ingredient Modal */}
       {isComponentModalOpen && (

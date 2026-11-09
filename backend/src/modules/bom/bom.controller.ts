@@ -34,22 +34,43 @@ export class BOMController {
     }
   }
 
-  public static async addComponent(req: Request, res: Response, next: NextFunction): Promise<void> {
+  public static async addComponent(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-      const component = await BOMService.addComponent(id!, req.body);
+      const component = await BOMService.addComponent(id!, req.body, req.user?.userId);
       sendCreated(res, component, 'Component added to BOM');
     } catch (error) {
       next(error);
     }
   }
 
-  public static async removeComponent(req: Request, res: Response, next: NextFunction): Promise<void> {
+  public static async updateComponent(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
       const componentId = Array.isArray(req.params.componentId) ? req.params.componentId[0] : req.params.componentId;
-      await BOMService.removeComponent(id!, componentId!);
+      const component = await BOMService.updateComponent(id!, componentId!, req.body, req.user?.userId);
+      sendSuccess(res, component, 'Component updated successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async removeComponent(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const componentId = Array.isArray(req.params.componentId) ? req.params.componentId[0] : req.params.componentId;
+      await BOMService.removeComponent(id!, componentId!, req.user?.userId);
       sendSuccess(res, { removed: true }, 'Component removed from BOM');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async getHistory(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const history = await BOMService.getBOMHistory(id!);
+      sendSuccess(res, history);
     } catch (error) {
       next(error);
     }

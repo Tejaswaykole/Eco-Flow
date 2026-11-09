@@ -108,8 +108,31 @@ export const BOMService = {
     return res.data.data;
   },
 
+  async updateComponent(
+    bomId: string,
+    componentId: string,
+    payload: {
+      partNumber?: string;
+      name?: string;
+      componentType?: string;
+      quantity?: number;
+      unitCost?: number;
+      unitOfMeasure?: string;
+      materialType?: string;
+      notes?: string;
+    }
+  ) {
+    const res = await apiClient.patch<ApiResponse<any>>(`/boms/${bomId}/components/${componentId}`, payload);
+    return res.data.data;
+  },
+
   async removeComponent(bomId: string, componentId: string) {
     const res = await apiClient.delete<ApiResponse<any>>(`/boms/${bomId}/components/${componentId}`);
+    return res.data.data;
+  },
+
+  async getBOMHistory(bomId: string) {
+    const res = await apiClient.get<ApiResponse<any[]>>(`/boms/${bomId}/history`);
     return res.data.data;
   },
 };

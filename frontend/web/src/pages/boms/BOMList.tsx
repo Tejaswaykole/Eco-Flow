@@ -38,6 +38,7 @@ export function BOMList() {
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-semibold">
                 <tr>
                   <th className="py-3 px-4">BOM Number</th>
+                  <th className="py-3 px-4">Category</th>
                   <th className="py-3 px-4">Product Part & Name</th>
                   <th className="py-3 px-4 text-center">Version</th>
                   <th className="py-3 px-4 text-center">Ingredients / Items</th>
@@ -58,6 +59,11 @@ export function BOMList() {
                     <tr key={bom.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
                         {bom.bom_number}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                          {bom.product?.category?.name || 'Uncategorized'}
+                        </span>
                       </td>
                       <td className="py-3.5 px-4">
                         <div className="font-semibold text-slate-800">

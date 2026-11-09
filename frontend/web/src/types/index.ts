@@ -22,6 +22,12 @@ export interface ProductCategory {
     last_name: string;
     email: string;
   };
+  products?: {
+    id: string;
+    part_number: string;
+    name: string;
+    boms?: BOM[];
+  }[];
   created_at: string;
 }
 

@@ -38,6 +38,27 @@ export class ProductService {
             email: true,
           },
         },
+        products: {
+          select: {
+            id: true,
+            part_number: true,
+            name: true,
+            boms: {
+              select: {
+                id: true,
+                bom_number: true,
+                status: true,
+                current_version: true,
+                components: {
+                  select: {
+                    id: true,
+                    total_cost: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
   }

@@ -4,9 +4,10 @@ import { ProductService } from '../../services';
 import { PageHeader, EmptyState } from '../../components/ui/Cards';
 import { Button } from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badges';
-import { Tag, Plus, X, Search, Edit2 } from 'lucide-react';
+import { Tag, Plus, X, Search, Edit2, Layers, ArrowRight } from 'lucide-react';
 import { formatDate } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
+import { Link } from 'react-router-dom';
 
 export function CategoriesList() {
   const queryClient = useQueryClient();
@@ -123,52 +124,78 @@ export function CategoriesList() {
                   <th className="py-3 px-4">Code</th>
                   <th className="py-3 px-4">Category Name</th>
                   <th className="py-3 px-4">Description</th>
+                  <th className="py-3 px-4 text-center">Associated BOMs</th>
                   <th className="py-3 px-4">Author / Owner</th>
                   <th className="py-3 px-4">Created Date</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredCategories.map((cat) => (
-                  <tr key={cat.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
-                      <span className="px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-primary font-bold">
-                        {cat.code}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 font-medium text-slate-900 text-sm">{cat.name}</td>
-                    <td className="py-3.5 px-4 text-slate-500 max-w-md truncate">
-                      {cat.description || '—'}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600 font-medium">
-                      {cat.creator ? `${cat.creator.first_name} ${cat.creator.last_name}` : 'System'}
-                      {cat.created_by === user?.id && (
-                        <span className="ml-1.5 px-1.5 py-0.5 rounded text-[10px] bg-teal-50 text-teal-700 border border-teal-200 font-semibold">
-                          You
+                {filteredCategories.map((cat) => {
+                  const categoryBoms = (cat.products || []).flatMap((p: any) =>
+                    (p.boms || []).map((b: any) => ({ ...b, product: p }))
+                  );
+
+                  return (
+                    <tr key={cat.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
+                        <span className="px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-primary font-bold">
+                          {cat.code}
                         </span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-500">{formatDate(cat.created_at)}</td>
-                    <td className="py-3.5 px-4 text-right">
-                      {canEdit(cat) ? (
-                        <button
-                          onClick={() => {
-                            setEditingCategory(cat);
-                            setEditName(cat.name);
-                            setEditDescription(cat.description || '');
-                            setError(null);
-                          }}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 text-xs font-semibold transition-colors"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                          <span>Edit</span>
-                        </button>
-                      ) : (
-                        <span className="text-[11px] text-slate-400 italic">Read-only</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="py-3.5 px-4 font-medium text-slate-900 text-sm">{cat.name}</td>
+                      <td className="py-3.5 px-4 text-slate-500 max-w-xs truncate">
+                        {cat.description || '—'}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        {categoryBoms.length === 0 ? (
+                          <span className="text-[11px] text-slate-400">0 BOMs</span>
+                        ) : (
+                          <div className="flex flex-wrap items-center justify-center gap-1.5">
+                            {categoryBoms.map((b: any) => (
+                              <Link
+                                key={b.id}
+                                to={`/boms/${b.id}`}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100 transition-colors"
+                                title={`Open ${b.bom_number}`}
+                              >
+                                <Layers className="w-3 h-3 text-teal-600" />
+                                <span>{b.bom_number}</span>
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-600 font-medium">
+                        {cat.creator ? `${cat.creator.first_name} ${cat.creator.last_name}` : 'System'}
+                        {cat.created_by === user?.id && (
+                          <span className="ml-1.5 px-1.5 py-0.5 rounded text-[10px] bg-teal-50 text-teal-700 border border-teal-200 font-semibold">
+                            You
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-500">{formatDate(cat.created_at)}</td>
+                      <td className="py-3.5 px-4 text-right">
+                        {canEdit(cat) ? (
+                          <button
+                            onClick={() => {
+                              setEditingCategory(cat);
+                              setEditName(cat.name);
+                              setEditDescription(cat.description || '');
+                              setError(null);
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 text-xs font-semibold transition-colors"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 italic">Read-only</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

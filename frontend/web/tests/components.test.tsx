@@ -8,10 +8,10 @@ import { formatCurrency, formatDate } from '../src/lib/utils';
 
 describe('ECOFlow Web Components & Utilities Suite', () => {
   it('formats currency correctly with two decimal places', () => {
-    expect(formatCurrency(12.5)).toBe('$12.50');
-    expect(formatCurrency('100.99')).toBe('$100.99');
-    expect(formatCurrency(0)).toBe('$0.00');
-    expect(formatCurrency(null)).toBe('$0.00');
+    expect(formatCurrency(12.5)).toBe('₹12.50');
+    expect(formatCurrency('100.99')).toBe('₹100.99');
+    expect(formatCurrency(0)).toBe('₹0.00');
+    expect(formatCurrency(null)).toBe('₹0.00');
   });
 
   it('formats dates consistently', () => {

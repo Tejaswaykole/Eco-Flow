@@ -8,11 +8,19 @@ import { requestIdMiddleware } from './middleware/requestId.js';
 import { errorHandler } from './middleware/error.js';
 import { prisma } from './config/database.js';
 
+// Safe BigInt JSON serialization support
+(BigInt.prototype as any).toJSON = function () {
+  const intVal = Number(this);
+  return Number.isSafeInteger(intVal) ? intVal : this.toString();
+};
+
 // Route imports
 import { authRouter } from './modules/auth/auth.routes.js';
 import { productRouter } from './modules/products/product.routes.js';
 import { bomRouter } from './modules/bom/bom.routes.js';
 import { ecoRouter } from './modules/eco/eco.routes.js';
+import { ecrRouter } from './modules/ecr/ecr.routes.js';
+import { ecnRouter } from './modules/ecn/ecn.routes.js';
 import { userRouter } from './modules/users/user.routes.js';
 
 export function createApp(): Express {
@@ -69,6 +77,8 @@ export function createApp(): Express {
   apiV1.use('/products', productRouter);
   apiV1.use('/boms', bomRouter);
   apiV1.use('/ecos', ecoRouter);
+  apiV1.use('/ecrs', ecrRouter);
+  apiV1.use('/ecns', ecnRouter);
   apiV1.use('/users', userRouter);
 
   app.use('/api/v1', apiV1);

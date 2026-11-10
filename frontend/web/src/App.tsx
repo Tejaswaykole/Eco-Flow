@@ -12,6 +12,10 @@ import { BOMList } from './pages/boms/BOMList';
 import { BOMDetail } from './pages/boms/BOMDetail';
 import { ECOList } from './pages/ecos/ECOList';
 import { ECODetail } from './pages/ecos/ECODetail';
+import { ECRList } from './pages/ecrs/ECRList';
+import { ECRDetail } from './pages/ecrs/ECRDetail';
+import { ECNList } from './pages/ecns/ECNList';
+import { ECNDetail } from './pages/ecns/ECNDetail';
 import { ApprovalsWorkspace } from './pages/approvals/ApprovalsWorkspace';
 import { UserList } from './pages/users/UserList';
 
@@ -40,6 +44,10 @@ export function App() {
         <Route path="boms/:id" element={<BOMDetail />} />
         <Route path="ecos" element={<ECOList />} />
         <Route path="ecos/:id" element={<ECODetail />} />
+        <Route path="ecrs" element={<ECRList />} />
+        <Route path="ecrs/:id" element={<ECRDetail />} />
+        <Route path="ecns" element={<ECNList />} />
+        <Route path="ecns/:id" element={<ECNDetail />} />
         <Route
           path="approvals"
           element={

@@ -7,7 +7,9 @@ import {
   Box,
   Tag,
   Layers,
+  ClipboardList,
   GitPullRequest,
+  Bell,
   CheckSquare,
   Users,
   Settings,
@@ -23,7 +25,9 @@ export function Sidebar() {
     { name: 'Categories', href: '/categories', icon: Tag },
     { name: 'Products', href: '/products', icon: Box },
     { name: 'Bills of Materials', href: '/boms', icon: Layers },
+    { name: 'Change Requests (ECR)', href: '/ecrs', icon: ClipboardList },
     { name: 'Change Orders (ECO)', href: '/ecos', icon: GitPullRequest },
+    { name: 'Change Notices (ECN)', href: '/ecns', icon: Bell },
   ];
 
   if (hasRole('APPROVER') || hasRole('ADMINISTRATOR') || hasPermission('eco:approve')) {

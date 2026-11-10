@@ -1,8 +1,19 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 
-// Load environment from database/.env or process.env
-dotenv.config({ path: path.resolve(process.cwd(), '../database/.env') });
+// Load environment from database/.env (root or nested) or process.env
+const possibleEnvPaths = [
+  path.resolve(process.cwd(), 'database/.env'),
+  path.resolve(process.cwd(), '../database/.env'),
+  path.resolve(process.cwd(), '.env'),
+];
+
+for (const p of possibleEnvPaths) {
+  if (fs.existsSync(p)) {
+    dotenv.config({ path: p });
+  }
+}
 dotenv.config();
 
 export const config = {

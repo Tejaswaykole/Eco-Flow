@@ -22,7 +22,11 @@ export function Login() {
       await login({ email, password });
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Invalid credentials. Please verify your email and password.');
+      if (!err.response) {
+        setError('Unable to connect to ECOFlow backend API (port 4000). Please ensure the backend server is running.');
+      } else {
+        setError(err.response?.data?.error?.message || 'Invalid credentials. Please verify your email and password.');
+      }
     } finally {
       setIsLoading(false);
     }

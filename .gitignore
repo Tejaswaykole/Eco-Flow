@@ -116,3 +116,15 @@ scratch/
 .cache/
 .parcel-cache/
 .eslintcache
+
+# Confidential local security audit outputs, raw dumps, and private diagnostics
+*.audit.local*
+*.secret.dump
+*.remediation.log
+private-diagnostics/
+
+# Internal audit reports, pre-push checklists, and diagnostic reviews
+docs/GITHUB_PRE_PUSH_AUDIT.md
+docs/ECOFLOW_COMPREHENSIVE_PRODUCT_AUDIT.md
+docs/ECOFLOW_NEXT_PHASE_READINESS.md
+docs/product-audit/

@@ -53,6 +53,8 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
+let isNotifyingSessionExpired = false;
+
 // Response interceptor with refresh token rotation and anti-loop safeguard
 apiClient.interceptors.response.use(
   (response) => response,
@@ -113,7 +115,19 @@ apiClient.interceptors.response.use(
         processQueue(refreshErr, null);
         sessionStorage.removeItem('ecoflow_access_token');
         sessionStorage.removeItem('ecoflow_refresh_token');
-        window.dispatchEvent(new CustomEvent('ecoflow:auth:session_expired'));
+
+        if (!isNotifyingSessionExpired) {
+          isNotifyingSessionExpired = true;
+          window.dispatchEvent(
+            new CustomEvent('ecoflow:auth:session_expired', {
+              detail: { message: 'Your session has expired. Please sign in again to continue.' },
+            })
+          );
+          setTimeout(() => {
+            isNotifyingSessionExpired = false;
+          }, 5000);
+        }
+
         return Promise.reject(refreshErr);
       } finally {
         isRefreshing = false;

@@ -2,6 +2,12 @@ import { createApp } from './app.js';
 import { config } from './config/env.js';
 import { prisma } from './config/database.js';
 
+// Safe BigInt JSON serialization support
+(BigInt.prototype as any).toJSON = function () {
+  const intVal = Number(this);
+  return Number.isSafeInteger(intVal) ? intVal : this.toString();
+};
+
 const app = createApp();
 
 const server = app.listen(config.port, () => {

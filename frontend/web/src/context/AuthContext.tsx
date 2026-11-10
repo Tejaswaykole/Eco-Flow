@@ -18,6 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null);
 
   const fetchCurrentUser = async () => {
     const token = sessionStorage.getItem('ecoflow_access_token');
@@ -54,8 +55,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     fetchCurrentUser();
 
-    const handleSessionExpired = () => {
+    const handleSessionExpired = (event: Event) => {
       setUser(null);
+      const customEvent = event as CustomEvent<{ message?: string }>;
+      const msg = customEvent.detail?.message || 'Your session has expired. Please sign in again to continue.';
+      setSessionExpiredMessage(msg);
     };
 
     window.addEventListener('ecoflow:auth:session_expired', handleSessionExpired);
@@ -122,6 +126,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         hasPermission,
       }}
     >
+      {sessionExpiredMessage && (
+        <div className="fixed top-4 right-4 z-[9999] max-w-md bg-amber-50 border border-amber-300 text-amber-900 px-4 py-3 rounded-xl shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+          <div className="text-xs font-medium">{sessionExpiredMessage}</div>
+          <button
+            onClick={() => setSessionExpiredMessage(null)}
+            className="ml-3 text-amber-700 hover:text-amber-900 font-bold text-sm"
+          >
+            ×
+          </button>
+        </div>
+      )}
       {children}
     </AuthContext.Provider>
   );

@@ -63,6 +63,38 @@ export class ECOController {
     }
   }
 
+  public static async createRevision(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const result = await ECOService.createRevision(id!, req.body, req.user!.userId, req.user!.roles);
+      sendCreated(res, result, `Revision ${result.revision.revision_number} initialized successfully in DRAFT`);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async updateChange(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const changeId = Array.isArray(req.params.changeId) ? req.params.changeId[0] : req.params.changeId;
+      const updated = await ECOService.updateChange(id!, changeId!, req.body, req.user!.userId, req.user!.roles);
+      sendSuccess(res, updated, 'Change item updated successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async removeChange(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const changeId = Array.isArray(req.params.changeId) ? req.params.changeId[0] : req.params.changeId;
+      const result = await ECOService.removeChange(id!, changeId!, req.user!.userId, req.user!.roles);
+      sendSuccess(res, result, 'Change item deleted successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   public static async submitECO(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;

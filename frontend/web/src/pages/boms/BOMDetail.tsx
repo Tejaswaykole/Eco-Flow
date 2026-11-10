@@ -63,7 +63,34 @@ export function BOMDetail() {
   const [error, setError] = useState<string | null>(null);
 
   const [editingComponent, setEditingComponent] = useState<any | null>(null);
-  const [activeTab, setActiveTab] = useState<'items' | 'history'>('items');
+  const [activeTab, setActiveTab] = useState<'items' | 'tree' | 'exploded' | 'history'>('items');
+  const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
+
+  // Sub-Assembly Form States
+  const [subAssemblyBomId, setSubAssemblyBomId] = useState<string>('');
+  const [subAssemblyVersion, setSubAssemblyVersion] = useState<number | undefined>(undefined);
+  const [isCostOverridden, setIsCostOverridden] = useState<boolean>(false);
+  const [costOverrideReason, setCostOverrideReason] = useState<string>('');
+
+  const { data: bomList = [] } = useQuery({
+    queryKey: ['boms', 'options'],
+    queryFn: async () => {
+      const res = await BOMService.listBOMs(1, 100);
+      return (res.data as any[]) || [];
+    },
+  });
+
+  const { data: bomTree, isLoading: isTreeLoading } = useQuery({
+    queryKey: ['bom-tree', id],
+    queryFn: () => BOMService.getBOMTree(id!),
+    enabled: !!id && activeTab === 'tree',
+  });
+
+  const { data: bomExploded, isLoading: isExplodedLoading } = useQuery({
+    queryKey: ['bom-exploded', id],
+    queryFn: () => BOMService.getBOMExploded(id!),
+    enabled: !!id && activeTab === 'exploded',
+  });
 
   const { data: bom, isLoading } = useQuery({
     queryKey: ['bom', id],
@@ -81,6 +108,8 @@ export function BOMDetail() {
     mutationFn: (payload: any) => BOMService.addComponent(id!, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bom', id] });
+      queryClient.invalidateQueries({ queryKey: ['bom-tree', id] });
+      queryClient.invalidateQueries({ queryKey: ['bom-exploded', id] });
       queryClient.invalidateQueries({ queryKey: ['bom-history', id] });
       setIsComponentModalOpen(false);
       setPartNumber('');
@@ -88,6 +117,10 @@ export function BOMDetail() {
       setComponentType('RAW_MATERIAL');
       setQuantity(1);
       setUnitCost(0);
+      setSubAssemblyBomId('');
+      setSubAssemblyVersion(undefined);
+      setIsCostOverridden(false);
+      setCostOverrideReason('');
       setMaterialType('');
       setNotes('');
     },
@@ -250,6 +283,30 @@ export function BOMDetail() {
         </button>
 
         <button
+          onClick={() => setActiveTab('tree')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
+            activeTab === 'tree'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <FileSpreadsheet className="w-4 h-4" />
+          <span>Multi-Level Hierarchy Tree</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('exploded')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
+            activeTab === 'exploded'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Calculator className="w-4 h-4" />
+          <span>Exploded Raw Materials View</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('history')}
           className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
             activeTab === 'history'
@@ -262,7 +319,145 @@ export function BOMDetail() {
         </button>
       </div>
 
-      {activeTab === 'history' ? (
+      {activeTab === 'tree' ? (
+        /* Multi-Level Hierarchy Tree View */
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden p-6 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Multi-Level Assembly Tree</h3>
+              <p className="text-xs text-slate-500">Recursive component hierarchy and modular sub-assembly rollups</p>
+            </div>
+            {bomTree && (
+              <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                Total Rolled-Up: {formatCurrency(bomTree.total_cost)}
+              </span>
+            )}
+          </div>
+
+          {isTreeLoading ? (
+            <div className="p-8 text-center text-xs text-slate-400">Expanding multi-level tree structure...</div>
+          ) : !bomTree || !bomTree.components || bomTree.components.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-400">
+              No components or sub-assemblies defined yet.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-200">
+                  <tr>
+                    <th className="py-2.5 px-3">Hierarchy / Part</th>
+                    <th className="py-2.5 px-3">Name</th>
+                    <th className="py-2.5 px-3">Type</th>
+                    <th className="py-2.5 px-3 text-center">Qty</th>
+                    <th className="py-2.5 px-3 text-right">Unit Cost</th>
+                    <th className="py-2.5 px-3 text-right">Extended</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-mono">
+                  {(() => {
+                    const renderRows = (nodes: any[], depth = 1): React.ReactNode => {
+                      return nodes.map((node: any) => {
+                        const hasChildren = node.sub_assembly_tree && node.sub_assembly_tree.components?.length > 0;
+                        const isExpanded = expandedNodes[node.id] !== false; // default expanded
+
+                        return (
+                          <React.Fragment key={node.id}>
+                            <tr className={`hover:bg-slate-50/80 ${depth > 1 ? 'bg-slate-50/40' : ''}`}>
+                              <td className="py-2.5 px-3 flex items-center gap-1.5" style={{ paddingLeft: `${depth * 16}px` }}>
+                                {hasChildren ? (
+                                  <button
+                                    onClick={() => setExpandedNodes(prev => ({ ...prev, [node.id]: !isExpanded }))}
+                                    className="p-0.5 rounded hover:bg-slate-200 text-slate-600"
+                                  >
+                                    <span className="text-[10px] font-bold">{isExpanded ? '▼' : '▶'}</span>
+                                  </button>
+                                ) : (
+                                  <span className="w-3 inline-block text-slate-300">•</span>
+                                )}
+                                <span className="font-bold text-slate-800">{node.part_number}</span>
+                                {node.sub_assembly_bom && (
+                                  <span className="text-[10px] text-primary font-bold px-1.5 py-0.2 bg-teal-50 border border-teal-200 rounded">
+                                    Sub-Assembly
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 font-sans text-slate-700">{node.name}</td>
+                              <td className="py-2.5 px-3 font-sans">
+                                <span className="px-2 py-0.5 rounded bg-slate-100 text-[10px] font-semibold text-slate-700">
+                                  {node.component_type.replace(/_/g, ' ')}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 text-center">{node.quantity} {node.unit_of_measure}</td>
+                              <td className="py-2.5 px-3 text-right">{formatCurrency(node.unit_cost)}</td>
+                              <td className="py-2.5 px-3 text-right font-bold text-slate-900">{formatCurrency(node.total_cost)}</td>
+                            </tr>
+                            {hasChildren && isExpanded && renderRows(node.sub_assembly_tree.components, depth + 1)}
+                          </React.Fragment>
+                        );
+                      });
+                    };
+                    return renderRows(bomTree.components);
+                  })()}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : activeTab === 'exploded' ? (
+        /* Exploded Raw Materials View */
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden p-6 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">BOM Explosion — Consolidated Raw Materials</h3>
+              <p className="text-xs text-slate-500">Flat procurement summary aggregating parts across all hierarchy levels</p>
+            </div>
+            {bomExploded && (
+              <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                Exploded Total: {formatCurrency(bomExploded.total_exploded_cost)}
+              </span>
+            )}
+          </div>
+
+          {isExplodedLoading ? (
+            <div className="p-8 text-center text-xs text-slate-400">Computing bottom-up explosion...</div>
+          ) : !bomExploded || !bomExploded.items || bomExploded.items.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-400">No leaf raw materials found.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-200">
+                  <tr>
+                    <th className="py-2.5 px-3">Part #</th>
+                    <th className="py-2.5 px-3">Material Name</th>
+                    <th className="py-2.5 px-3">Category</th>
+                    <th className="py-2.5 px-3 text-center">Cumulative Required Qty</th>
+                    <th className="py-2.5 px-3 text-right">Unit Cost</th>
+                    <th className="py-2.5 px-3 text-right">Total Estimated Cost</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-mono">
+                  {bomExploded.items.map((item: any, idx: number) => (
+                    <tr key={idx} className="hover:bg-slate-50">
+                      <td className="py-2.5 px-3 font-bold text-slate-800">{item.part_number}</td>
+                      <td className="py-2.5 px-3 font-sans text-slate-700">{item.name}</td>
+                      <td className="py-2.5 px-3 font-sans">
+                        <span className="px-2 py-0.5 rounded bg-slate-100 text-[10px] font-semibold text-slate-700">
+                          {item.component_type.replace(/_/g, ' ')}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-center font-bold text-primary">
+                        {item.cumulative_quantity} {item.unit_of_measure}
+                      </td>
+                      <td className="py-2.5 px-3 text-right">{formatCurrency(item.unit_cost)}</td>
+                      <td className="py-2.5 px-3 text-right font-bold text-slate-900">{formatCurrency(item.total_cost)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : activeTab === 'history' ? (
         /* Audit History View */
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">

@@ -34,10 +34,40 @@ export class BOMController {
     }
   }
 
+  public static async getBOMTree(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const tree = await BOMService.getBOMTree(id!);
+      sendSuccess(res, tree);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async getBOMExploded(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const exploded = await BOMService.getBOMExploded(id!);
+      sendSuccess(res, exploded);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async getBOMWhereUsed(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const usages = await BOMService.getBOMWhereUsed(id!);
+      sendSuccess(res, usages);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   public static async addComponent(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-      const component = await BOMService.addComponent(id!, req.body, req.user?.userId);
+      const component = await BOMService.addComponent(id!, req.body, req.user?.userId, req.user?.roles);
       sendCreated(res, component, 'Component added to BOM');
     } catch (error) {
       next(error);
@@ -48,7 +78,7 @@ export class BOMController {
     try {
       const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
       const componentId = Array.isArray(req.params.componentId) ? req.params.componentId[0] : req.params.componentId;
-      const component = await BOMService.updateComponent(id!, componentId!, req.body, req.user?.userId);
+      const component = await BOMService.updateComponent(id!, componentId!, req.body, req.user?.userId, req.user?.roles);
       sendSuccess(res, component, 'Component updated successfully');
     } catch (error) {
       next(error);

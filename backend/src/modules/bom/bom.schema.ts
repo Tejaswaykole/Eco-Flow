@@ -34,7 +34,44 @@ export const addBOMComponentSchema = z.object({
   unitCost: z.number().nonnegative(),
   materialType: z.string().optional(),
   notes: z.string().optional(),
-});
+  subAssemblyBomId: z.string().uuid().optional(),
+  subAssemblyVersion: z.number().int().positive().optional(),
+  isCostOverridden: z.boolean().optional(),
+  costOverrideReason: z.string().optional(),
+}).refine(
+  (data) => {
+    if (data.isCostOverridden && (!data.costOverrideReason || data.costOverrideReason.trim().length === 0)) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'costOverrideReason is required when isCostOverridden is true',
+    path: ['costOverrideReason'],
+  }
+).refine(
+  (data) => {
+    if (data.subAssemblyBomId && data.componentType !== 'SUB_ASSEMBLY') {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "componentType must be 'SUB_ASSEMBLY' when subAssemblyBomId is provided",
+    path: ['componentType'],
+  }
+).refine(
+  (data) => {
+    if (data.subAssemblyVersion !== undefined && !data.subAssemblyBomId) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'subAssemblyVersion cannot be provided without subAssemblyBomId',
+    path: ['subAssemblyVersion'],
+  }
+);
 
 export type CreateBOMInput = z.infer<typeof createBOMSchema>;
 export type AddBOMComponentInput = z.infer<typeof addBOMComponentSchema>;
@@ -67,6 +104,32 @@ export const updateBOMComponentSchema = z.object({
   unitCost: z.number().nonnegative().optional(),
   materialType: z.string().optional(),
   notes: z.string().optional(),
-});
+  subAssemblyBomId: z.string().uuid().nullable().optional(),
+  subAssemblyVersion: z.number().int().positive().nullable().optional(),
+  isCostOverridden: z.boolean().optional(),
+  costOverrideReason: z.string().nullable().optional(),
+}).refine(
+  (data) => {
+    if (data.isCostOverridden && (!data.costOverrideReason || data.costOverrideReason.trim().length === 0)) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'costOverrideReason is required when isCostOverridden is true',
+    path: ['costOverrideReason'],
+  }
+).refine(
+  (data) => {
+    if (data.subAssemblyBomId === null && data.subAssemblyVersion && data.subAssemblyVersion !== null) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'subAssemblyVersion cannot be provided when subAssemblyBomId is explicitly set to null',
+    path: ['subAssemblyVersion'],
+  }
+);
 
 export type UpdateBOMComponentInput = z.infer<typeof updateBOMComponentSchema>;

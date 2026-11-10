@@ -5,8 +5,9 @@ import { ProductService, BOMService } from '../../services';
 import { PageHeader, EmptyState } from '../../components/ui/Cards';
 import { Button } from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badges';
-import { Box, Layers, Plus, ArrowLeft, History, X, ArrowRight } from 'lucide-react';
+import { Box, Layers, Plus, ArrowLeft, History, X, ArrowRight, Edit3 } from 'lucide-react';
 import { formatDate } from '../../lib/utils';
+import { ProductStatus } from '../../types';
 
 export function ProductDetail() {
   const { id } = useParams<{ id: string }>();
@@ -16,12 +17,33 @@ export function ProductDetail() {
   const [isBomModalOpen, setIsBomModalOpen] = useState(false);
   const [bomNumber, setBomNumber] = useState('');
   const [bomDesc, setBomDesc] = useState('');
+
+  // Edit Product Modal states
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editStatus, setEditStatus] = useState<ProductStatus>('DRAFT');
+
   const [error, setError] = useState<string | null>(null);
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', id],
     queryFn: () => ProductService.getProduct(id!),
     enabled: !!id,
+  });
+
+  const updateProductMutation = useMutation({
+    mutationFn: (payload: { name: string; description: string; status: ProductStatus }) =>
+      ProductService.updateProduct(id!, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['product', id] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      setIsEditOpen(false);
+      setError(null);
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.error?.message || 'Failed to update product');
+    },
   });
 
   const createBomMutation = useMutation({
@@ -63,6 +85,20 @@ export function ProductDetail() {
         description={product.description || 'Hardware part specification definition.'}
       >
         <StatusBadge status={product.status} />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setEditName(product.name);
+            setEditDesc(product.description || '');
+            setEditStatus(product.status as ProductStatus);
+            setError(null);
+            setIsEditOpen(true);
+          }}
+        >
+          <Edit3 className="w-4 h-4 mr-1.5" />
+          <span>Edit Product</span>
+        </Button>
         <Button size="sm" onClick={() => setIsBomModalOpen(true)}>
           <Plus className="w-4 h-4 mr-1.5" />
           <span>Create BOM</span>
@@ -257,6 +293,78 @@ export function ProductDetail() {
                 </Button>
                 <Button size="sm" type="submit" isLoading={createBomMutation.isPending}>
                   Initialize BOM
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Product Modal */}
+      {isEditOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900">Edit Product</h3>
+              <button onClick={() => setIsEditOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setError(null);
+                updateProductMutation.mutate({
+                  name: editName,
+                  description: editDesc,
+                  status: editStatus,
+                });
+              }}
+              className="space-y-4 mt-4"
+            >
+              {error && <div className="text-xs text-rose-600 bg-rose-50 p-2.5 rounded-lg border border-rose-200">{error}</div>}
+
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-700">Product Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="mt-1 w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-700">Lifecycle Status</label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value as ProductStatus)}
+                  className="mt-1 w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="DRAFT">DRAFT</option>
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="ARCHIVED">ARCHIVED</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-700">Description</label>
+                <textarea
+                  rows={3}
+                  value={editDesc}
+                  onChange={(e) => setEditDesc(e.target.value)}
+                  className="mt-1 w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                <Button variant="outline" size="sm" type="button" onClick={() => setIsEditOpen(false)}>
+                  Cancel
+                </Button>
+                <Button size="sm" type="submit" isLoading={updateProductMutation.isPending}>
+                  Save Changes
                 </Button>
               </div>
             </form>

@@ -62,3 +62,47 @@ export enum BOMStatus {
   ACTIVE = 'ACTIVE',
   ARCHIVED = 'ARCHIVED',
 }
+
+export enum ECRRequestType {
+  DEFECT = 'DEFECT',
+  IMPROVEMENT = 'IMPROVEMENT',
+  COST_REDUCTION = 'COST_REDUCTION',
+  SAFETY = 'SAFETY',
+  OTHER = 'OTHER',
+}
+
+export enum ECRStatus {
+  SUBMITTED = 'SUBMITTED',
+  UNDER_REVIEW = 'UNDER_REVIEW',
+  NEEDS_INFORMATION = 'NEEDS_INFORMATION',
+  ACCEPTED = 'ACCEPTED',
+  REJECTED = 'REJECTED',
+  PROMOTED = 'PROMOTED',
+}
+
+export enum ECNStatus {
+  DRAFT = 'DRAFT',
+  ISSUED = 'ISSUED',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum ECNDepartment {
+  ENGINEERING = 'ENGINEERING',
+  QUALITY = 'QUALITY',
+  PRODUCTION = 'PRODUCTION',
+  PROCUREMENT = 'PROCUREMENT',
+  INVENTORY = 'INVENTORY',
+  MANAGEMENT = 'MANAGEMENT',
+}
+
+export enum ECNAcknowledgementStatus {
+  PENDING = 'PENDING',
+  ACKNOWLEDGED = 'ACKNOWLEDGED',
+}
+
+export enum MaterialDispositionType {
+  SCRAP = 'SCRAP',
+  REWORK = 'REWORK',
+  USE_AS_IS = 'USE_AS_IS',
+}

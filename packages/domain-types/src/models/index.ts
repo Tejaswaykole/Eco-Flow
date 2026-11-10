@@ -8,6 +8,12 @@ import {
   ChangeTarget,
   ImpactType,
   ApprovalDecision,
+  ECRRequestType,
+  ECRStatus,
+  ECNStatus,
+  ECNDepartment,
+  ECNAcknowledgementStatus,
+  MaterialDispositionType,
 } from '../enums.js';
 
 export interface User {
@@ -257,4 +263,76 @@ export interface LoginAudit {
   device?: string | null;
   createdAt: Date;
   user?: User;
+}
+
+export interface ECR {
+  id: string;
+  ecrNumber: string;
+  title: string;
+  description: string;
+  requestType: ECRRequestType;
+  priority: PriorityLevel;
+  status: ECRStatus;
+  productId?: string | null;
+  bomId?: string | null;
+  submittedBy: string;
+  assignedTo?: string | null;
+  affectedPartNumber?: string | null;
+  suggestedSolution?: string | null;
+  reviewComments?: string | null;
+  rejectionReason?: string | null;
+  promotedEcoId?: string | null;
+  submittedAt: Date;
+  reviewedAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ECN {
+  id: string;
+  ecnNumber: string;
+  ecoId: string;
+  versionReleaseId: string;
+  title: string;
+  changeSummary: string;
+  reasonForChange?: string | null;
+  effectiveDate: Date;
+  status: ECNStatus;
+  issuedBy?: string | null;
+  issuedAt?: Date | null;
+  completedAt?: Date | null;
+  cancelledAt?: Date | null;
+  cancellationReason?: string | null;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+  distributions?: ECNDistribution[];
+  dispositions?: ECNMaterialDisposition[];
+}
+
+export interface ECNDistribution {
+  id: string;
+  ecnId: string;
+  department: ECNDepartment;
+  assignedTo?: string | null;
+  acknowledgementStatus: ECNAcknowledgementStatus;
+  acknowledgedBy?: string | null;
+  acknowledgedAt?: Date | null;
+  comments?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ECNMaterialDisposition {
+  id: string;
+  ecnId: string;
+  productId?: string | null;
+  partNumber?: string | null;
+  dispositionType: MaterialDispositionType;
+  quantity?: number | null;
+  instructions: string;
+  responsibleDepartment: ECNDepartment;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
 }

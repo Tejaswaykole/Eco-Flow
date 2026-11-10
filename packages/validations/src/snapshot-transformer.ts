@@ -17,6 +17,16 @@ export interface SnapshotComponent {
   total_cost: string;
   material_type?: string;
   notes?: string | null;
+  sub_assembly_bom_id?: string | null;
+  sub_assembly_version?: number | null;
+  is_cost_overridden?: boolean;
+  cost_override_reason?: string | null;
+  sub_assembly?: {
+    bom_id: string;
+    bom_number: string;
+    version_number: number;
+    components: SnapshotComponent[];
+  } | null;
 }
 
 export interface FrozenSnapshot {

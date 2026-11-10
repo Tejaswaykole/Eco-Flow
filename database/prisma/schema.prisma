@@ -71,6 +71,50 @@ enum ECOStatus {
   CANCELLED
 }
 
+enum ECRRequestType {
+  DEFECT
+  IMPROVEMENT
+  COST_REDUCTION
+  SAFETY
+  OTHER
+}
+
+enum ECRStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  NEEDS_INFORMATION
+  ACCEPTED
+  REJECTED
+  PROMOTED
+}
+
+enum ECNStatus {
+  DRAFT
+  ISSUED
+  COMPLETED
+  CANCELLED
+}
+
+enum ECNDepartment {
+  ENGINEERING
+  QUALITY
+  PRODUCTION
+  PROCUREMENT
+  INVENTORY
+  MANAGEMENT
+}
+
+enum ECNAcknowledgementStatus {
+  PENDING
+  ACKNOWLEDGED
+}
+
+enum MaterialDispositionType {
+  SCRAP
+  REWORK
+  USE_AS_IS
+}
+
 enum PriorityLevel {
   LOW
   MEDIUM
@@ -164,6 +208,13 @@ model User {
   created_product_vers  ProductVersion[]    @relation("ProductVersionCreator")
   created_bom_vers      BOMVersion[]        @relation("BomVersionCreator")
   created_releases      VersionRelease[]    @relation("ReleaseCreator")
+  submitted_ecrs        ECR[]               @relation("EcrSubmitter")
+  assigned_ecrs         ECR[]               @relation("EcrAssignee")
+  issued_ecns           ECN[]               @relation("EcnIssuer")
+  created_ecns          ECN[]               @relation("EcnCreator")
+  assigned_ecn_dists    ECNDistribution[]   @relation("EcnDistAssignee")
+  acknowledged_ecn_dists ECNDistribution[]  @relation("EcnDistAcknowledger")
+  created_ecn_disps     ECNMaterialDisposition[] @relation("EcnDispCreator")
   audit_logs            AuditLog[]
   login_audits          LoginAudit[]
   notifications         Notification[]
@@ -323,6 +374,8 @@ model Product {
   boms             BOM[]
   attachments      ProductAttachment[]
   ecos             ECO[]
+  ecrs             ECR[]
+  ecn_dispositions ECNMaterialDisposition[]
   product_versions ProductVersion[]
   bom_versions     BOMVersion[]
   version_releases VersionRelease[]
@@ -365,11 +418,13 @@ model BOM {
   updated_at      DateTime  @updatedAt @db.Timestamptz(6)
 
   // Relations
-  product      Product        @relation(fields: [product_id], references: [id], onDelete: Restrict)
-  creator      User           @relation("BomCreator", fields: [created_by], references: [id], onDelete: Restrict)
-  components   BOMComponent[]
-  ecos         ECO[]
-  bom_versions BOMVersion[]   @relation("BomToVersions")
+  product              Product        @relation(fields: [product_id], references: [id], onDelete: Restrict)
+  creator              User           @relation("BomCreator", fields: [created_by], references: [id], onDelete: Restrict)
+  components           BOMComponent[] @relation("ParentBOMComponents")
+  parent_usages        BOMComponent[] @relation("SubAssemblyUsages")
+  ecos                 ECO[]
+  ecrs                 ECR[]
+  bom_versions         BOMVersion[]   @relation("BomToVersions")
 
   // Composite candidate key to support composite FK from BOMVersion(bom_id, product_id) and ECO(bom_id, product_id)
   @@unique([id, product_id])
@@ -379,22 +434,30 @@ model BOM {
 }
 
 model BOMComponent {
-  id              String           @id @default(uuid()) @db.Uuid
-  bom_id          String           @db.Uuid
-  part_number     String           @db.VarChar(100)
-  name            String           @db.VarChar(255)
-  component_type  BOMComponentType @default(RAW_MATERIAL)
-  quantity        Decimal          @db.Decimal(12, 4)
-  unit_of_measure String           @db.VarChar(50)
-  unit_cost       Decimal          @db.Decimal(12, 2)
-  total_cost      Decimal          @db.Decimal(14, 2)
-  created_at      DateTime         @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime         @updatedAt @db.Timestamptz(6)
+  id                   String           @id @default(uuid()) @db.Uuid
+  bom_id               String           @db.Uuid
+  sub_assembly_bom_id  String?          @db.Uuid
+  sub_assembly_version Int?
+  part_number          String           @db.VarChar(100)
+  name                 String           @db.VarChar(255)
+  component_type       BOMComponentType @default(RAW_MATERIAL)
+  quantity             Decimal          @db.Decimal(12, 4)
+  unit_of_measure      String           @db.VarChar(50)
+  unit_cost            Decimal          @db.Decimal(12, 2)
+  total_cost           Decimal          @db.Decimal(14, 2)
+  is_cost_overridden   Boolean          @default(false)
+  cost_override_reason String?          @db.Text
+  created_at           DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime         @updatedAt @db.Timestamptz(6)
 
   // Relations
-  bom BOM @relation(fields: [bom_id], references: [id], onDelete: Cascade)
+  bom              BOM         @relation("ParentBOMComponents", fields: [bom_id], references: [id], onDelete: Cascade)
+  sub_assembly_bom BOM?        @relation("SubAssemblyUsages", fields: [sub_assembly_bom_id], references: [id], onDelete: Restrict)
+  pinned_version   BOMVersion? @relation("PinnedSubAssemblyVersion", fields: [sub_assembly_bom_id, sub_assembly_version], references: [bom_id, version_number], onDelete: Restrict)
 
   @@index([bom_id])
+  @@index([sub_assembly_bom_id])
+  @@index([sub_assembly_bom_id, sub_assembly_version])
   @@index([part_number])
   @@map("bom_components")
 }
@@ -418,28 +481,33 @@ model ECO {
   cancellation_reason String?       @db.Text
   created_by          String        @db.Uuid
   assigned_to         String?       @db.Uuid
+  ecr_id              String?       @unique @db.Uuid
   created_at          DateTime      @default(now()) @db.Timestamptz(6)
   updated_at          DateTime      @updatedAt @db.Timestamptz(6)
 
   // Relations
-  product          Product          @relation(fields: [product_id], references: [id], onDelete: Restrict)
-  bom              BOM              @relation(fields: [bom_id, product_id], references: [id, product_id], onDelete: Restrict)
-  creator          User             @relation("EcoCreator", fields: [created_by], references: [id], onDelete: Restrict)
-  assignee         User?            @relation("EcoAssignee", fields: [assigned_to], references: [id], onDelete: SetNull)
-  eco_revisions    ECORevision[]
-  eco_changes      ECOChange[]
-  eco_comments     ECOComment[]
-  eco_attachments  ECOAttachment[]
-  approvals        Approval[]
-  product_versions ProductVersion[]
-  bom_versions     BOMVersion[]
-  version_releases VersionRelease[]
+  product           Product          @relation(fields: [product_id], references: [id], onDelete: Restrict)
+  bom               BOM              @relation(fields: [bom_id, product_id], references: [id, product_id], onDelete: Restrict)
+  creator           User             @relation("EcoCreator", fields: [created_by], references: [id], onDelete: Restrict)
+  assignee          User?            @relation("EcoAssignee", fields: [assigned_to], references: [id], onDelete: SetNull)
+  promoted_from_ecr ECR?             @relation("EcrPromotedEco")
+  originating_ecr   ECR?             @relation("EcoOriginatingEcr", fields: [ecr_id], references: [id], onDelete: SetNull)
+  eco_revisions     ECORevision[]
+  eco_changes       ECOChange[]
+  eco_comments      ECOComment[]
+  eco_attachments   ECOAttachment[]
+  approvals         Approval[]
+  product_versions  ProductVersion[]
+  bom_versions      BOMVersion[]
+  version_releases  VersionRelease[]
+  ecn               ECN?
 
   @@index([product_id])
   @@index([bom_id])
   @@index([status])
   @@index([created_by])
   @@index([assigned_to])
+  @@index([ecr_id])
   @@map("ecos")
 }
 
@@ -539,6 +607,133 @@ model ECOAttachment {
 }
 
 // ==============================================================================
+// Engineering Change Requests (ECR)
+// ==============================================================================
+
+model ECR {
+  id                   String         @id @default(uuid()) @db.Uuid
+  ecr_number           String         @unique @db.VarChar(100)
+  title                String         @db.VarChar(255)
+  description          String         @db.Text
+  request_type         ECRRequestType
+  priority             PriorityLevel  @default(MEDIUM)
+  status               ECRStatus      @default(SUBMITTED)
+  product_id           String?        @db.Uuid
+  bom_id               String?        @db.Uuid
+  submitted_by         String         @db.Uuid
+  assigned_to          String?        @db.Uuid
+  affected_part_number String?        @db.VarChar(100)
+  suggested_solution   String?        @db.Text
+  review_comments      String?        @db.Text
+  rejection_reason     String?        @db.Text
+  promoted_eco_id      String?        @unique @db.Uuid
+  submitted_at         DateTime       @default(now()) @db.Timestamptz(6)
+  reviewed_at          DateTime?      @db.Timestamptz(6)
+  created_at           DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime       @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  submitter            User           @relation("EcrSubmitter", fields: [submitted_by], references: [id], onDelete: Restrict)
+  assignee             User?          @relation("EcrAssignee", fields: [assigned_to], references: [id], onDelete: SetNull)
+  product              Product?       @relation(fields: [product_id], references: [id], onDelete: SetNull)
+  bom                  BOM?           @relation(fields: [bom_id], references: [id], onDelete: SetNull)
+  promoted_eco         ECO?           @relation("EcrPromotedEco", fields: [promoted_eco_id], references: [id], onDelete: SetNull)
+  originating_ecos     ECO[]          @relation("EcoOriginatingEcr")
+
+  @@index([status])
+  @@index([submitted_by])
+  @@index([assigned_to])
+  @@index([product_id])
+  @@index([bom_id])
+  @@map("ecrs")
+}
+
+// ==============================================================================
+// Engineering Change Notices (ECN) & Distribution
+// ==============================================================================
+
+model ECN {
+  id                  String        @id @default(uuid()) @db.Uuid
+  ecn_number          String        @unique @db.VarChar(100)
+  eco_id              String        @unique @db.Uuid
+  version_release_id  String        @unique @db.Uuid
+  title               String        @db.VarChar(255)
+  change_summary      String        @db.Text
+  reason_for_change   String?       @db.Text
+  effective_date      DateTime      @db.Timestamptz(6)
+  status              ECNStatus     @default(DRAFT)
+  issued_by           String?       @db.Uuid
+  issued_at           DateTime?     @db.Timestamptz(6)
+  completed_at        DateTime?     @db.Timestamptz(6)
+  cancelled_at        DateTime?     @db.Timestamptz(6)
+  cancellation_reason String?       @db.Text
+  created_by          String        @db.Uuid
+  created_at          DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime      @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  eco                 ECO           @relation(fields: [eco_id], references: [id], onDelete: Restrict)
+  version_release     VersionRelease @relation(fields: [version_release_id], references: [id], onDelete: Restrict)
+  issuer              User?         @relation("EcnIssuer", fields: [issued_by], references: [id], onDelete: SetNull)
+  creator             User          @relation("EcnCreator", fields: [created_by], references: [id], onDelete: Restrict)
+  distributions       ECNDistribution[]
+  dispositions        ECNMaterialDisposition[]
+
+  @@index([status])
+  @@index([effective_date])
+  @@index([created_by])
+  @@map("ecns")
+}
+
+model ECNDistribution {
+  id                     String                   @id @default(uuid()) @db.Uuid
+  ecn_id                 String                   @db.Uuid
+  department             ECNDepartment
+  assigned_to            String?                  @db.Uuid
+  acknowledgement_status ECNAcknowledgementStatus @default(PENDING)
+  acknowledged_by        String?                  @db.Uuid
+  acknowledged_at        DateTime?                @db.Timestamptz(6)
+  comments               String?                  @db.Text
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime                 @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  ecn                    ECN                      @relation(fields: [ecn_id], references: [id], onDelete: Cascade)
+  assignee               User?                    @relation("EcnDistAssignee", fields: [assigned_to], references: [id], onDelete: SetNull)
+  acknowledger           User?                    @relation("EcnDistAcknowledger", fields: [acknowledged_by], references: [id], onDelete: SetNull)
+
+  @@unique([ecn_id, department])
+  @@index([ecn_id])
+  @@index([department])
+  @@index([acknowledgement_status])
+  @@map("ecn_distributions")
+}
+
+model ECNMaterialDisposition {
+  id                     String                   @id @default(uuid()) @db.Uuid
+  ecn_id                 String                   @db.Uuid
+  product_id             String?                  @db.Uuid
+  part_number            String?                  @db.VarChar(100)
+  disposition_type       MaterialDispositionType
+  quantity               Decimal?                 @db.Decimal(12, 4)
+  instructions           String                   @db.Text
+  responsible_department ECNDepartment
+  created_by             String                   @db.Uuid
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime                 @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  ecn                    ECN                      @relation(fields: [ecn_id], references: [id], onDelete: Cascade)
+  product                Product?                 @relation(fields: [product_id], references: [id], onDelete: SetNull)
+  creator                User                     @relation("EcnDispCreator", fields: [created_by], references: [id], onDelete: Restrict)
+
+  @@index([ecn_id])
+  @@index([disposition_type])
+  @@index([responsible_department])
+  @@map("ecn_material_dispositions")
+}
+
+// ==============================================================================
 // Approval Workflow
 // ==============================================================================
 
@@ -610,6 +805,7 @@ model BOMVersion {
   eco_revision     ECORevision      @relation(fields: [eco_id, revision_number], references: [eco_id, revision_number], onDelete: Restrict)
   creator          User             @relation("BomVersionCreator", fields: [created_by], references: [id], onDelete: Restrict)
   version_releases VersionRelease[]
+  pinned_by_components BOMComponent[] @relation("PinnedSubAssemblyVersion")
 
   // Composite candidate key to support composite FK from VersionRelease(bom_version_id, product_id)
   @@unique([id, product_id])
@@ -636,6 +832,7 @@ model VersionRelease {
   product_version ProductVersion @relation(fields: [product_version_id, product_id], references: [id, product_id], onDelete: Restrict)
   bom_version     BOMVersion     @relation(fields: [bom_version_id, product_id], references: [id, product_id], onDelete: Restrict)
   releaser        User           @relation("ReleaseCreator", fields: [released_by], references: [id], onDelete: Restrict)
+  ecn             ECN?
 
   @@unique([eco_id])
   @@index([product_id])

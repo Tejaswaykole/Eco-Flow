@@ -143,7 +143,11 @@ export class ECOService {
   ) {
     return await prisma.$transaction(async (tx) => {
       // 1. Transaction-scoped advisory lock to serialize revision creation on lock ID 4200000001002
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(4200000001002);`;
+      if (typeof (tx as any).$executeRaw === 'function') {
+        await (tx as any).$executeRaw`SELECT pg_advisory_xact_lock(4200000001002);`;
+      } else if (typeof (tx as any).$queryRaw === 'function') {
+        await (tx as any).$queryRaw`SELECT pg_advisory_xact_lock(4200000001002);`;
+      }
 
       // 2. Fetch ECO with all existing revisions and their changes
       const eco = await tx.eCO.findUnique({
@@ -517,6 +521,10 @@ export class ECOService {
       throw new ForbiddenError('Only assigned APPROVERs or ADMINISTRATORs can decide ECOs');
     }
 
+    if (eco.created_by === userId && !userRoles.includes('ADMINISTRATOR')) {
+      throw new ForbiddenError('ECO creators cannot approve their own change orders');
+    }
+
     const isAdminOverride = !userRoles.includes('APPROVER') && userRoles.includes('ADMINISTRATOR');
     if (isAdminOverride && !input.overrideReason) {
       throw new AppError('Administrative override requires a documented justification reason', 400);
@@ -706,6 +714,17 @@ export class ECOService {
           entityId: ecoId,
           newValues: { decision: input.decision, approvalId: approval.id },
         },
+        tx
+      );
+
+      // Notify ECO author
+      await AuditService.notify(
+        eco.created_by,
+        newStatus === 'APPROVED' ? 'ECO_APPROVED' : newStatus === 'REJECTED' ? 'ECO_REJECTED' : 'APPROVAL_REQUESTED',
+        `ECO ${eco.eco_number} ${newStatus}`,
+        `Your change order proposal has been reviewed: decision is ${newStatus}.`,
+        'ECO',
+        ecoId,
         tx
       );
 

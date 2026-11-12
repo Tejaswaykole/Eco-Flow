@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { ECNController } from './ecn.controller.js';
-import { authenticate, requireRole } from '../../middleware/auth.js';
+import { authenticate, requirePermission } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import {
   generateECNSchema,
@@ -17,13 +17,13 @@ export const ecnRouter = Router();
 ecnRouter.use(authenticate);
 
 // 1. Retrieval
-ecnRouter.get('/', ECNController.listECNs);
-ecnRouter.get('/:id', ECNController.getECN);
+ecnRouter.get('/', requirePermission('ecn:read'), ECNController.listECNs);
+ecnRouter.get('/:id', requirePermission('ecn:read'), ECNController.getECN);
 
 // 2. Generation (from ECO ID)
 ecnRouter.post(
   '/generate/:id',
-  requireRole('LEAD_ENGINEER', 'ADMINISTRATOR'),
+  requirePermission('ecn:generate'),
   validate(generateECNSchema),
   ECNController.generateECN
 );
@@ -31,21 +31,21 @@ ecnRouter.post(
 // 3. Lifecycle Transitions
 ecnRouter.post(
   '/:id/issue',
-  requireRole('LEAD_ENGINEER', 'ADMINISTRATOR'),
+  requirePermission('ecn:issue'),
   validate(issueECNSchema),
   ECNController.issueECN
 );
 
 ecnRouter.post(
   '/:id/complete',
-  requireRole('LEAD_ENGINEER', 'ADMINISTRATOR'),
+  requirePermission('ecn:complete'),
   validate(completeECNSchema),
   ECNController.completeECN
 );
 
 ecnRouter.post(
   '/:id/cancel',
-  requireRole('LEAD_ENGINEER', 'ADMINISTRATOR'),
+  requirePermission('ecn:complete'),
   validate(cancelECNSchema),
   ECNController.cancelECN
 );
@@ -53,6 +53,7 @@ ecnRouter.post(
 // 4. Department Acknowledgement
 ecnRouter.post(
   '/:id/distributions/:distributionId/acknowledge',
+  requirePermission('ecn:acknowledge'),
   validate(acknowledgeDistributionSchema),
   ECNController.acknowledgeDistribution
 );
@@ -60,7 +61,7 @@ ecnRouter.post(
 // 5. Material Dispositions
 ecnRouter.post(
   '/:id/dispositions',
-  requireRole('LEAD_ENGINEER', 'ADMINISTRATOR'),
+  requirePermission('ecn:disposition'),
   validate(createMaterialDispositionSchema),
   ECNController.addDisposition
 );

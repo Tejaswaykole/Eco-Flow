@@ -135,11 +135,14 @@ export class ProductService {
     });
   }
 
-  public static async listProducts(page = 1, limit = 20, status?: string, search?: string) {
+  public static async listProducts(page = 1, limit = 20, status?: string, search?: string, categoryId?: string) {
     const skip = (page - 1) * limit;
     const where: any = {};
     if (status) {
       where.status = status;
+    }
+    if (categoryId) {
+      where.category_id = categoryId;
     }
     if (search) {
       where.OR = [

@@ -144,6 +144,16 @@ export class ECNService {
         tx
       );
 
+      await AuditService.notify(
+        userId,
+        'SYSTEM_ALERT',
+        'ECN Generated',
+        `Engineering Change Notice ${ecnNumber} generated for ${eco.title}.`,
+        'ECN',
+        ecnId,
+        tx
+      );
+
       // 10. Return fresh ECN with full relations
       return await tx.eCN.findUnique({
         where: { id: ecnId },
@@ -358,6 +368,17 @@ export class ECNService {
         tx
       );
 
+      // Notify ECN creator
+      await AuditService.notify(
+        ecn.created_by,
+        'SYSTEM_ALERT',
+        'ECN Formally Issued',
+        `Change notice ${ecn.ecn_number} has been formally issued to target departments.`,
+        'ECN',
+        id,
+        tx
+      );
+
       return updated;
     });
   }
@@ -476,17 +497,33 @@ export class ECNService {
       throw new ConflictError(`Department '${dist.department}' distribution has already been acknowledged`);
     }
 
-    // Permission check: Assigned user, authorized department lead/engineer, or admin
-    const isAuthorized =
-      dist.assigned_to === userId ||
-      user.roles.includes('ADMINISTRATOR') ||
-      user.roles.includes('LEAD_ENGINEER') ||
-      user.roles.includes('APPROVER') ||
+    // Permission check: Authenticated user must possess 'ecn:acknowledge' permission AND be:
+    // 1. Administrator (full system governance), OR
+    // 2. Lead Engineer (authorized supervisor for engineering notices), OR
+    // 3. Other eligible role (e.g. Approver, Operator) ONLY when explicitly assigned (dist.assigned_to === userId).
+    // An unassigned distribution must NOT be acknowledged by an ordinary user merely because they hold 'ecn:acknowledge'.
+    const hasAcknowledgePerm =
       user.permissions.includes('ecn:acknowledge') ||
-      user.permissions.includes('admin:all');
+      user.permissions.includes('admin:all') ||
+      user.roles.includes('ADMINISTRATOR');
 
-    if (!isAuthorized) {
-      throw new ForbiddenError(`You do not have authorization to acknowledge the '${dist.department}' distribution`);
+    if (!hasAcknowledgePerm) {
+      throw new ForbiddenError("Required permission(s): ecn:acknowledge");
+    }
+
+    const isSupervisor =
+      user.roles.includes('ADMINISTRATOR') ||
+      user.roles.includes('LEAD_ENGINEER');
+
+    const isAssignedRecipient =
+      Boolean(dist.assigned_to) && dist.assigned_to === userId;
+
+    if (!isSupervisor && !isAssignedRecipient) {
+      if (!dist.assigned_to) {
+        throw new ForbiddenError(`Cannot acknowledge an unassigned distribution for '${dist.department}'. An explicit recipient assignment or supervisory authorization is required.`);
+      } else {
+        throw new ForbiddenError(`You are not the designated recipient for the '${dist.department}' distribution`);
+      }
     }
 
     return await prisma.$transaction(async (tx) => {
@@ -516,6 +553,17 @@ export class ECNService {
             comments: input.comments,
           },
         },
+        tx
+      );
+
+      // Notify ECN creator
+      await AuditService.notify(
+        ecn.created_by,
+        'SYSTEM_ALERT',
+        'ECN Department Signoff',
+        `Department ${dist.department} has formally acknowledged ECN ${ecn.ecn_number}.`,
+        'ECN',
+        ecnId,
         tx
       );
 

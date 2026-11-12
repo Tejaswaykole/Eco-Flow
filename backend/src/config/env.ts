@@ -16,6 +16,19 @@ for (const p of possibleEnvPaths) {
 }
 dotenv.config();
 
+// Validate production security requirements
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.JWT_ACCESS_SECRET || process.env.JWT_ACCESS_SECRET.includes('fallback')) {
+    throw new Error('FATAL: JWT_ACCESS_SECRET must be explicitly set to a secure secret in production mode.');
+  }
+  if (!process.env.JWT_REFRESH_SECRET || process.env.JWT_REFRESH_SECRET.includes('fallback')) {
+    throw new Error('FATAL: JWT_REFRESH_SECRET must be explicitly set to a secure secret in production mode.');
+  }
+  if (!process.env.DATABASE_URL) {
+    throw new Error('FATAL: DATABASE_URL must be set in production mode.');
+  }
+}
+
 export const config = {
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '4000', 10),

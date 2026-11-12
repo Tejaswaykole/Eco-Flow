@@ -8,15 +8,15 @@ import {
   createRevisionSchema,
   updateChangeSchema,
 } from './eco.schema.js';
-import { authenticate, requirePermission, requireRole } from '../../middleware/auth.js';
+import { authenticate, requirePermission } from '../../middleware/auth.js';
 import { ECNController } from '../ecn/ecn.controller.js';
 import { generateECNSchema } from '../ecn/ecn.schema.js';
 
 const router = Router();
 
-router.get('/', authenticate, ECOController.listECOs);
+router.get('/', authenticate, requirePermission('eco:read'), ECOController.listECOs);
 router.post('/', authenticate, requirePermission('eco:create'), validate(createECOSchema), ECOController.createECO);
-router.get('/:id', authenticate, ECOController.getECO);
+router.get('/:id', authenticate, requirePermission('eco:read'), ECOController.getECO);
 router.post('/:id/changes', authenticate, requirePermission('eco:edit'), validate(addChangeSchema), ECOController.addChange);
 router.patch('/:id/changes/:changeId', authenticate, requirePermission('eco:edit'), validate(updateChangeSchema), ECOController.updateChange);
 router.delete('/:id/changes/:changeId', authenticate, requirePermission('eco:edit'), ECOController.removeChange);
@@ -26,7 +26,7 @@ router.post('/:id/review', authenticate, requirePermission('eco:approve'), valid
 router.post(
   '/:id/generate-ecn',
   authenticate,
-  requireRole('LEAD_ENGINEER', 'ADMINISTRATOR'),
+  requirePermission('ecn:generate'),
   validate(generateECNSchema),
   ECNController.generateECN
 );

@@ -22,6 +22,17 @@ import { ecoRouter } from './modules/eco/eco.routes.js';
 import { ecrRouter } from './modules/ecr/ecr.routes.js';
 import { ecnRouter } from './modules/ecn/ecn.routes.js';
 import { userRouter } from './modules/users/user.routes.js';
+import { supplierRouter } from './modules/suppliers/supplier.routes.js';
+import { inventoryRouter } from './modules/inventory/inventory.routes.js';
+import { purchasingRouter } from './modules/purchasing/purchasing.routes.js';
+import { manufacturingRouter } from './modules/manufacturing/manufacturing.routes.js';
+import { qualityRouter } from './modules/quality/quality.routes.js';
+import { notificationRouter } from './modules/notifications/notification.routes.js';
+import { approvalsRouter } from './modules/approvals/approvals.routes.js';
+import { activityRouter } from './modules/audit/activity.routes.js';
+import { dashboardRouter } from './modules/dashboard/dashboard.routes.js';
+import { reportsRouter } from './modules/reports/reports.routes.js';
+import { adminRouter } from './modules/admin/admin.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -80,6 +91,18 @@ export function createApp(): Express {
   apiV1.use('/ecrs', ecrRouter);
   apiV1.use('/ecns', ecnRouter);
   apiV1.use('/users', userRouter);
+  apiV1.use('/suppliers', supplierRouter);
+  apiV1.use('/inventory', inventoryRouter);
+  apiV1.use('/purchasing', purchasingRouter);
+  apiV1.use('/manufacturing', manufacturingRouter);
+  apiV1.use('/quality', qualityRouter);
+  apiV1.use('/notifications', notificationRouter);
+  apiV1.use('/approvals', approvalsRouter);
+  apiV1.use('/activity-timeline', activityRouter);
+  apiV1.use('/audit/activity', activityRouter);
+  apiV1.use('/dashboard', dashboardRouter);
+  apiV1.use('/reports', reportsRouter);
+  apiV1.use('/admin', adminRouter);
 
   app.use('/api/v1', apiV1);
 

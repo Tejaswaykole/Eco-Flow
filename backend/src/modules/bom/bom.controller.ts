@@ -105,4 +105,14 @@ export class BOMController {
       next(error);
     }
   }
+
+  public static async releaseBOM(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const released = await BOMService.releaseBOM(id!, req.user!.userId);
+      sendSuccess(res, released, 'BOM released successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
 }

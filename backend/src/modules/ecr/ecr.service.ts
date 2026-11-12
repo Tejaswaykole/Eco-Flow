@@ -83,6 +83,17 @@ export class ECRService {
         tx
       );
 
+      // Notification to submitter confirming submission
+      await AuditService.notify(
+        userId,
+        'SYSTEM_ALERT',
+        'ECR Submitted Successfully',
+        `Your change request ${ecrNumber} has been logged and queued for review.`,
+        'ECR',
+        ecrId,
+        tx
+      );
+
       return ecr;
     });
   }
@@ -247,6 +258,16 @@ export class ECRService {
         tx
       );
 
+      await AuditService.notify(
+        input.assignedTo,
+        'APPROVAL_REQUESTED',
+        'ECR Assigned for Review',
+        `You have been assigned to review ${ecr.ecr_number}: ${ecr.title}.`,
+        'ECR',
+        id,
+        tx
+      );
+
       return updated;
     });
   }
@@ -291,6 +312,16 @@ export class ECRService {
         tx
       );
 
+      await AuditService.notify(
+        ecr.submitted_by,
+        'SYSTEM_ALERT',
+        'ECR Review Started',
+        `Your change request ${ecr.ecr_number} is now under review.`,
+        'ECR',
+        id,
+        tx
+      );
+
       return updated;
     });
   }
@@ -331,6 +362,16 @@ export class ECRService {
           oldValues: { status: 'UNDER_REVIEW' },
           newValues: { status: 'NEEDS_INFORMATION', comments: input.comments },
         },
+        tx
+      );
+
+      await AuditService.notify(
+        ecr.submitted_by,
+        'APPROVAL_REQUESTED',
+        'ECR Information Requested',
+        `Reviewer requested more information for ${ecr.ecr_number}: ${input.comments}`,
+        'ECR',
+        id,
         tx
       );
 
@@ -430,6 +471,16 @@ export class ECRService {
         tx
       );
 
+      await AuditService.notify(
+        ecr.submitted_by,
+        'ECO_APPROVED',
+        'ECR Accepted',
+        `Your change request ${ecr.ecr_number} has been accepted.`,
+        'ECR',
+        id,
+        tx
+      );
+
       return updated;
     });
   }
@@ -475,6 +526,16 @@ export class ECRService {
           oldValues: { status: ecr.status },
           newValues: { status: 'REJECTED', rejectionReason: input.rejectionReason },
         },
+        tx
+      );
+
+      await AuditService.notify(
+        ecr.submitted_by,
+        'ECO_REJECTED',
+        'ECR Rejected',
+        `Your change request ${ecr.ecr_number} was rejected: ${input.rejectionReason}`,
+        'ECR',
+        id,
         tx
       );
 
@@ -597,6 +658,16 @@ export class ECRService {
           entityId: ecoId,
           newValues: { ecoNumber: input.ecoNumber, title: ecoTitle, originatingEcrId: ecr.id },
         },
+        tx
+      );
+
+      await AuditService.notify(
+        ecr.submitted_by,
+        'ECO_APPROVED',
+        'ECR Promoted to ECO',
+        `Change request ${ecr.ecr_number} was promoted to change order ${input.ecoNumber}.`,
+        'ECO',
+        ecoId,
         tx
       );
 

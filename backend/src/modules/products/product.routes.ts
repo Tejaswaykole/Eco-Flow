@@ -7,14 +7,14 @@ import { authenticate, requirePermission } from '../../middleware/auth.js';
 const router = Router();
 
 // Categories
-router.get('/categories', authenticate, ProductController.listCategories);
+router.get('/categories', authenticate, requirePermission('product:read'), ProductController.listCategories);
 router.post('/categories', authenticate, requirePermission('product:write'), validate(createCategorySchema), ProductController.createCategory);
 router.patch('/categories/:id', authenticate, requirePermission('product:write'), validate(updateCategorySchema), ProductController.updateCategory);
 
 // Products
-router.get('/', authenticate, ProductController.listProducts);
+router.get('/', authenticate, requirePermission('product:read'), ProductController.listProducts);
 router.post('/', authenticate, requirePermission('product:write'), validate(createProductSchema), ProductController.createProduct);
-router.get('/:id', authenticate, ProductController.getProduct);
+router.get('/:id', authenticate, requirePermission('product:read'), ProductController.getProduct);
 router.patch('/:id', authenticate, requirePermission('product:write'), validate(updateProductSchema), ProductController.updateProduct);
 
 export const productRouter = router;

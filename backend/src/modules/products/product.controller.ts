@@ -52,8 +52,9 @@ export class ProductController {
       const limit = parseInt(req.query.limit as string, 10) || 20;
       const status = req.query.status as string | undefined;
       const search = req.query.search as string | undefined;
+      const categoryId = req.query.categoryId as string | undefined;
 
-      const result = await ProductService.listProducts(page, limit, status, search);
+      const result = await ProductService.listProducts(page, limit, status, search, categoryId);
       sendSuccess(res, result.products, undefined, 200, result.meta);
     } catch (error) {
       next(error);

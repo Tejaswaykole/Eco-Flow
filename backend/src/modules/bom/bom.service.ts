@@ -90,7 +90,11 @@ export class BOMService {
     return await prisma.$transaction(async (tx) => {
       // 1. Transaction-Scoped Advisory Lock: First statement in application transaction
       // Guarantees serialization of concurrent hierarchy mutations and establishes fresh snapshot boundary
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(4200000001001);`;
+      if (typeof (tx as any).$executeRaw === 'function') {
+        await (tx as any).$executeRaw`SELECT pg_advisory_xact_lock(4200000001001);`;
+      } else if (typeof (tx as any).$queryRaw === 'function') {
+        await (tx as any).$queryRaw`SELECT pg_advisory_xact_lock(4200000001001);`;
+      }
 
       const bom = await tx.bOM.findFirst({
         where: { id: bomId },
@@ -147,6 +151,7 @@ export class BOMService {
           unit_of_measure: input.unitOfMeasure,
           unit_cost: cost.toFixed(2) as any,
           total_cost: totalCost.toFixed(2) as any,
+          notes: input.notes,
         },
       });
 
@@ -197,7 +202,11 @@ export class BOMService {
 
     return await prisma.$transaction(async (tx) => {
       // 1. Transaction-Scoped Advisory Lock: First statement in application transaction
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(4200000001001);`;
+      if (typeof (tx as any).$executeRaw === 'function') {
+        await (tx as any).$executeRaw`SELECT pg_advisory_xact_lock(4200000001001);`;
+      } else if (typeof (tx as any).$queryRaw === 'function') {
+        await (tx as any).$queryRaw`SELECT pg_advisory_xact_lock(4200000001001);`;
+      }
 
       const bom = await tx.bOM.findFirst({ where: { id: bomId } });
       if (!bom) throw new NotFoundError('BOM', bomId);
@@ -284,6 +293,7 @@ export class BOMService {
           unit_cost: cost.toFixed(2) as any,
           total_cost: totalCost.toFixed(2) as any,
           ...(input.unitOfMeasure && { unit_of_measure: input.unitOfMeasure }),
+          ...(input.notes !== undefined && { notes: input.notes }),
         },
       });
 
@@ -584,5 +594,55 @@ export class BOMService {
       unit_of_measure: u.unit_of_measure,
       parent_bom_status: u.bom.status,
     }));
+  }
+
+  public static async releaseBOM(bomId: string, userId: string): Promise<any> {
+    const bom = await prisma.bOM.findUnique({
+      where: { id: bomId },
+      include: {
+        product: true,
+        components: true,
+      },
+    });
+
+    if (!bom) throw new NotFoundError('BOM', bomId);
+
+    if (bom.status === 'ACTIVE') {
+      throw new AppError(`BOM '${bom.bom_number}' is already active/released`, 400);
+    }
+
+    return await prisma.$transaction(async (tx) => {
+      const updatedBOM = await tx.bOM.update({
+        where: { id: bomId },
+        data: {
+          status: 'ACTIVE',
+          current_version: bom.current_version || 1,
+        },
+        include: {
+          product: true,
+          components: true,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          id: randomUUID(),
+          user_id: userId,
+          action: 'BOM_RELEASED',
+          entity_type: 'BOM',
+          entity_id: bomId,
+          severity: 'INFO',
+          old_values: { status: bom.status },
+          new_values: {
+            status: 'ACTIVE',
+            bomNumber: bom.bom_number,
+            version: updatedBOM.current_version,
+            componentCount: bom.components.length,
+          },
+        },
+      });
+
+      return updatedBOM;
+    });
   }
 }

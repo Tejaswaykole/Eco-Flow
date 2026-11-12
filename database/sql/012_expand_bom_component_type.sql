@@ -1,0 +1,21 @@
+-- Migration 012: Expand BOMComponentType to 18 domain values.
+-- Forward-only additive migration.
+-- Historical migrations 001–011 remain unchanged.
+
+BEGIN;
+
+ALTER TYPE public."BOMComponentType" ADD VALUE IF NOT EXISTS 'MECHANICAL';
+ALTER TYPE public."BOMComponentType" ADD VALUE IF NOT EXISTS 'ELECTRICAL';
+ALTER TYPE public."BOMComponentType" ADD VALUE IF NOT EXISTS 'OPTICAL';
+ALTER TYPE public."BOMComponentType" ADD VALUE IF NOT EXISTS 'CHEMICAL';
+ALTER TYPE public."BOMComponentType" ADD VALUE IF NOT EXISTS 'FASTENER';
+ALTER TYPE public."BOMComponentType" ADD VALUE IF NOT EXISTS 'PLASTIC_MOLDED';
+ALTER TYPE public."BOMComponentType" ADD VALUE IF NOT EXISTS 'SHEET_METAL';
+ALTER TYPE public."BOMComponentType" ADD VALUE IF NOT EXISTS 'CONSUMABLE';
+ALTER TYPE public."BOMComponentType" ADD VALUE IF NOT EXISTS 'LABEL_PRINTING';
+ALTER TYPE public."BOMComponentType" ADD VALUE IF NOT EXISTS 'CABLE_WIRE';
+ALTER TYPE public."BOMComponentType" ADD VALUE IF NOT EXISTS 'TOOLING';
+ALTER TYPE public."BOMComponentType" ADD VALUE IF NOT EXISTS 'SOFTWARE_FIRMWARE';
+
+COMMIT;
+

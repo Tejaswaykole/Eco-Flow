@@ -414,6 +414,7 @@ describe('Engineering Change Notice (ECN) Module Test Suite (Milestone 4)', () =
         id: 'dist-quality-1',
         ecn_id: mockEcnId,
         department: 'QUALITY',
+        assigned_to: mockQualityUserId,
         acknowledgement_status: 'PENDING',
       };
 

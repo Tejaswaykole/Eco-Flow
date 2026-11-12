@@ -159,7 +159,7 @@ describe('Frontend API Integration & Connectivity Fixes Suite', () => {
 
       // Simulate a 401 response from an authenticated endpoint
       try {
-        await apiClient.interceptors.response.handlers[0].rejected({
+        await (apiClient.interceptors.response as any).handlers[0].rejected({
           config: {
             url: '/products',
             headers: {},

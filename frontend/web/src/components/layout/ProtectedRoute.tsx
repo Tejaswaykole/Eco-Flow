@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { RoleName } from '../../types';
+import { AccessDenied } from '../../pages/error/AccessDenied';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -26,11 +27,11 @@ export function ProtectedRoute({ children, requiredRole, requiredPermission }: P
   }
 
   if (requiredRole && !hasRole(requiredRole) && !hasRole('ADMINISTRATOR')) {
-    return <Navigate to="/dashboard" replace />;
+    return <AccessDenied requiredRole={requiredRole} />;
   }
 
   if (requiredPermission && !hasPermission(requiredPermission)) {
-    return <Navigate to="/dashboard" replace />;
+    return <AccessDenied requiredPermission={requiredPermission} />;
   }
 
   return <>{children}</>;

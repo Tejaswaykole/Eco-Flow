@@ -7,9 +7,11 @@ import { StatusBadge } from '../../components/ui/Badges';
 import { Box, Plus, Search, Tag, X } from 'lucide-react';
 import { formatDate } from '../../lib/utils';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 export function ProductsList() {
   const queryClient = useQueryClient();
+  const { hasPermission } = useAuth();
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
@@ -53,10 +55,12 @@ export function ProductsList() {
         title="Products & Engineering Catalog"
         description="Master product records, revisions, and release lifecycles."
       >
-        <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-          <Plus className="w-4 h-4 mr-1.5" />
-          <span>New Product</span>
-        </Button>
+        {hasPermission('product:write') && (
+          <Button size="sm" onClick={() => setIsCreateOpen(true)}>
+            <Plus className="w-4 h-4 mr-1.5" />
+            <span>New Product</span>
+          </Button>
+        )}
       </PageHeader>
 
       <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">

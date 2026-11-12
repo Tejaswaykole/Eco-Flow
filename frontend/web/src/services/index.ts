@@ -1,5 +1,31 @@
 import { apiClient, ApiResponse } from '../lib/api';
-import { UserProfile, RegisterResponse, UserDetail, Product, ProductCategory, ProductStatus, BOM, ECO, ECR, ECN, AuditLog } from '../types';
+import {
+  UserProfile,
+  RegisterResponse,
+  UserDetail,
+  Product,
+  ProductCategory,
+  ProductStatus,
+  BOM,
+  ECO,
+  ECR,
+  ECN,
+  AuditLog,
+  Supplier,
+  SupplierProduct,
+  SupplierDashboardStats,
+  RFQ,
+  SupplierQuotation,
+  NegotiationEvent,
+  SupplierPerformanceAnalytics,
+  Warehouse,
+  InventoryItem,
+  InventoryTransaction,
+  PurchaseOrder,
+  WorkOrder,
+  QualityInspection,
+  QualityNonConformance,
+} from '../types';
 
 export const AuthService = {
   async login(credentials: { email: string; password: string }) {
@@ -40,9 +66,9 @@ export const AuthService = {
 };
 
 export const ProductService = {
-  async listProducts(page = 1, limit = 20, search?: string) {
+  async listProducts(page = 1, limit = 20, search?: string, categoryId?: string) {
     const res = await apiClient.get<ApiResponse<Product[]>>('/products', {
-      params: { page, limit, search },
+      params: { page, limit, search: search || undefined, categoryId: categoryId || undefined },
     });
     return res.data;
   },
@@ -93,6 +119,11 @@ export const BOMService = {
 
   async createBOM(payload: { productId: string; bomNumber: string; description?: string }) {
     const res = await apiClient.post<ApiResponse<BOM>>('/boms', payload);
+    return res.data.data;
+  },
+
+  async releaseBOM(id: string) {
+    const res = await apiClient.post<ApiResponse<BOM>>(`/boms/${id}/release`);
     return res.data.data;
   },
 
@@ -403,6 +434,579 @@ export const ECNService = {
     }
   ) {
     const res = await apiClient.post<ApiResponse<any>>(`/ecns/${ecnId}/dispositions`, payload);
+    return res.data.data;
+  },
+};
+
+export const SupplierService = {
+  async getDashboardStats() {
+    const res = await apiClient.get<ApiResponse<SupplierDashboardStats>>('/suppliers/dashboard-stats');
+    return res.data.data;
+  },
+
+  async listSuppliers(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    search?: string;
+    categoryId?: string;
+  }) {
+    const res = await apiClient.get<{
+      success: boolean;
+      suppliers: Supplier[];
+      pagination: { page: number; limit: number; total: number; totalPages: number };
+    }>('/suppliers', { params });
+    return res.data;
+  },
+
+  async getSupplier(id: string) {
+    const res = await apiClient.get<ApiResponse<Supplier>>(`/suppliers/${id}`);
+    return res.data.data;
+  },
+
+  async createSupplier(payload: {
+    supplierCode?: string;
+    name: string;
+    contactName?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    rating?: number;
+  }) {
+    const res = await apiClient.post<ApiResponse<Supplier>>('/suppliers', payload);
+    return res.data.data;
+  },
+
+  async updateSupplier(id: string, payload: Partial<Supplier>) {
+    const res = await apiClient.patch<ApiResponse<Supplier>>(`/suppliers/${id}`, payload);
+    return res.data.data;
+  },
+
+  async addSupplierProduct(
+    supplierId: string,
+    payload: {
+      productId: string;
+      supplierPartNumber?: string;
+      leadTimeDays?: number;
+      unitPrice: number;
+      minimumOrderQty?: number;
+      currency?: string;
+      isPreferred?: boolean;
+      status?: string;
+      validUntil?: string | null;
+    }
+  ) {
+    const res = await apiClient.post<ApiResponse<SupplierProduct>>(`/suppliers/${supplierId}/products`, payload);
+    return res.data.data;
+  },
+
+  async bulkMapProducts(
+    supplierId: string,
+    payload: {
+      mappings: {
+        productId: string;
+        supplierPartNumber?: string;
+        leadTimeDays?: number;
+        unitPrice: number;
+        minimumOrderQty?: number;
+        currency?: string;
+        isPreferred?: boolean;
+        status?: string;
+        validUntil?: string | null;
+      }[];
+    }
+  ) {
+    const res = await apiClient.post<ApiResponse<SupplierProduct[]>>(`/suppliers/${supplierId}/products/bulk`, payload);
+    return res.data.data;
+  },
+
+  async updateSupplierProduct(
+    supplierId: string,
+    productId: string,
+    payload: {
+      supplierPartNumber?: string | null;
+      leadTimeDays?: number;
+      unitPrice?: number;
+      minimumOrderQty?: number;
+      currency?: string;
+      isPreferred?: boolean;
+      status?: string;
+      validUntil?: string | null;
+    }
+  ) {
+    const res = await apiClient.patch<ApiResponse<SupplierProduct>>(`/suppliers/${supplierId}/products/${productId}`, payload);
+    return res.data.data;
+  },
+
+  async removeSupplierProduct(supplierId: string, productId: string) {
+    const res = await apiClient.delete<{ success: boolean }>(`/suppliers/${supplierId}/products/${productId}`);
+    return res.data;
+  },
+
+  async getProductSuppliersComparison(productId: string) {
+    const res = await apiClient.get<ApiResponse<{
+      product: { id: string; part_number: string; name: string; category: string };
+      suppliers: {
+        supplierId: string;
+        supplierCode: string;
+        supplierName: string;
+        supplierStatus: string;
+        supplierRating: number | null;
+        supplierPartNumber: string | null;
+        unitPrice: number;
+        currency: string;
+        leadTimeDays: number;
+        minimumOrderQty: number;
+        isPreferred: boolean;
+        status: string;
+        validUntil: string | null;
+        purchaseOrderCount: number;
+        completedPurchaseOrderCount: number;
+      }[];
+    }>>(`/suppliers/products/${productId}/comparison`);
+    return res.data.data;
+  },
+
+  async previewImport(supplierId: string, payload: { rows: any[]; columnMapping?: Record<string, string> }) {
+    const res = await apiClient.post<ApiResponse<any>>(`/suppliers/${supplierId}/import-preview`, payload);
+    return res.data.data;
+  },
+
+  async commitImport(supplierId: string, payload: { rows: any[] }) {
+    const res = await apiClient.post<ApiResponse<{ success: boolean; importedCount: number }>>(`/suppliers/${supplierId}/import-commit`, payload);
+    return res.data.data;
+  },
+
+  async exportData(params: { type: string; format?: 'json' | 'csv'; supplierId?: string; categoryId?: string; search?: string }) {
+    if (params.format === 'csv') {
+      const res = await apiClient.get('/suppliers/export', { params, responseType: 'blob' });
+      return res.data;
+    }
+    const res = await apiClient.get<ApiResponse<any[]>>('/suppliers/export', { params });
+    return res.data.data;
+  },
+
+  async listRFQs() {
+    const res = await apiClient.get<ApiResponse<RFQ[]>>('/suppliers/rfqs/list');
+    return res.data.data;
+  },
+
+  async createRFQ(payload: {
+    title: string;
+    submissionDate?: string;
+    deadlineDate?: string | null;
+    deliveryDate?: string | null;
+    notes?: string;
+    supplierIds: string[];
+    items: { productId: string; quantityRequired: number; notes?: string }[];
+  }) {
+    const res = await apiClient.post<ApiResponse<RFQ>>('/suppliers/rfqs', payload);
+    return res.data.data;
+  },
+
+  async createQuotation(payload: {
+    rfqId?: string | null;
+    supplierId: string;
+    productId: string;
+    supplierPartNumber?: string;
+    offeredQuantity: number;
+    unitPrice: number;
+    currency?: string;
+    taxAmount?: number;
+    shippingAmount?: number;
+    leadTimeDays?: number;
+    minimumOrderQuantity?: number;
+    validUntil?: string | null;
+    termsConditions?: string;
+    status?: string;
+  }) {
+    const res = await apiClient.post<ApiResponse<SupplierQuotation>>('/suppliers/quotations', payload);
+    return res.data.data;
+  },
+
+  async negotiateQuotation(
+    quotationId: string,
+    payload: {
+      eventType: 'COUNTER_OFFER' | 'REVISED_OFFER' | 'ACCEPTED' | 'REJECTED';
+      counterPrice: number;
+      currency?: string;
+      message: string;
+    }
+  ) {
+    const res = await apiClient.post<ApiResponse<{ event: NegotiationEvent; quotation: SupplierQuotation }>>(
+      `/suppliers/quotations/${quotationId}/negotiate`,
+      payload
+    );
+    return res.data.data;
+  },
+
+  async convertQuotationToPO(quotationId: string) {
+    const res = await apiClient.post<ApiResponse<PurchaseOrder>>(`/suppliers/quotations/${quotationId}/convert-to-po`);
+    return res.data.data;
+  },
+
+  async getSupplierPerformance(supplierId: string) {
+    const res = await apiClient.get<ApiResponse<SupplierPerformanceAnalytics>>(`/suppliers/${supplierId}/performance`);
+    return res.data.data;
+  },
+};
+
+export const InventoryService = {
+  async listWarehouses() {
+    const res = await apiClient.get<ApiResponse<Warehouse[]>>('/inventory/warehouses');
+    return res.data.data;
+  },
+
+  async createWarehouse(payload: { code: string; name: string; location?: string }) {
+    const res = await apiClient.post<ApiResponse<Warehouse>>('/inventory/warehouses', payload);
+    return res.data.data;
+  },
+
+  async listItems(params?: { warehouseId?: string; productId?: string }) {
+    const res = await apiClient.get<ApiResponse<InventoryItem[]>>('/inventory/items', { params });
+    return res.data.data;
+  },
+
+  async getItem(id: string) {
+    const res = await apiClient.get<ApiResponse<InventoryItem>>(`/inventory/items/${id}`);
+    return res.data.data;
+  },
+
+  async createTransaction(payload: {
+    itemId: string;
+    type: string;
+    quantity: number;
+    unitCost?: number;
+    referenceType?: string;
+    referenceId?: string;
+    notes?: string;
+  }) {
+    const res = await apiClient.post<ApiResponse<InventoryTransaction>>('/inventory/transactions', payload);
+    return res.data.data;
+  },
+
+  async listTransactions(params?: { itemId?: string; type?: string }) {
+    const res = await apiClient.get<ApiResponse<InventoryTransaction[]>>('/inventory/transactions', { params });
+    return res.data.data;
+  },
+};
+
+export const PurchasingService = {
+  async listOrders(params?: { supplierId?: string; status?: string }) {
+    const res = await apiClient.get<ApiResponse<PurchaseOrder[]>>('/purchasing/orders', { params });
+    return res.data.data;
+  },
+
+  async getOrder(id: string) {
+    const res = await apiClient.get<ApiResponse<PurchaseOrder>>(`/purchasing/orders/${id}`);
+    return res.data.data;
+  },
+
+  async createOrder(payload: {
+    supplierId: string;
+    expectedDeliveryDate?: string;
+    notes?: string;
+    lines: Array<{
+      productId: string;
+      quantityOrdered: number;
+      unitPrice: number;
+      unitOfMeasure?: string;
+    }>;
+  }) {
+    const res = await apiClient.post<ApiResponse<PurchaseOrder>>('/purchasing/orders', payload);
+    return res.data.data;
+  },
+
+  async submitOrder(id: string) {
+    const res = await apiClient.post<ApiResponse<PurchaseOrder>>(`/purchasing/orders/${id}/submit`);
+    return res.data.data;
+  },
+
+  async approveOrder(id: string) {
+    const res = await apiClient.post<ApiResponse<PurchaseOrder>>(`/purchasing/orders/${id}/approve`);
+    return res.data.data;
+  },
+
+  async receiveGoods(
+    id: string,
+    payload: {
+      warehouseId: string;
+      items: Array<{
+        lineId: string;
+        quantityReceived: number;
+        unitCost?: number;
+      }>;
+    }
+  ) {
+    const res = await apiClient.post<ApiResponse<PurchaseOrder>>(`/purchasing/orders/${id}/receive`, payload);
+    return res.data.data;
+  },
+};
+
+export const ManufacturingService = {
+  async listWorkOrders(params?: { productId?: string; status?: string }) {
+    const res = await apiClient.get<ApiResponse<WorkOrder[]>>('/manufacturing/orders', { params });
+    return res.data.data;
+  },
+
+  async getWorkOrder(id: string) {
+    const res = await apiClient.get<ApiResponse<WorkOrder>>(`/manufacturing/orders/${id}`);
+    return res.data.data;
+  },
+
+  async createWorkOrder(payload: {
+    productId: string;
+    bomId: string;
+    bomVersionId?: string;
+    targetQuantity: number;
+    notes?: string;
+  }) {
+    const res = await apiClient.post<ApiResponse<WorkOrder>>('/manufacturing/orders', payload);
+    return res.data.data;
+  },
+
+  async startWorkOrder(id: string) {
+    const res = await apiClient.post<ApiResponse<WorkOrder>>(`/manufacturing/orders/${id}/start`);
+    return res.data.data;
+  },
+
+  async consumeMaterial(
+    id: string,
+    payload: {
+      allocationId: string;
+      warehouseId: string;
+      quantityConsumed: number;
+    }
+  ) {
+    const res = await apiClient.post<ApiResponse<any>>(`/manufacturing/orders/${id}/consume`, payload);
+    return res.data.data;
+  },
+
+  async completeWorkOrder(
+    id: string,
+    payload: {
+      completedQuantity: number;
+      rejectedQuantity?: number;
+      warehouseId?: string;
+      notes?: string;
+    }
+  ) {
+    const res = await apiClient.post<ApiResponse<WorkOrder>>(`/manufacturing/orders/${id}/complete`, payload);
+    return res.data.data;
+  },
+};
+
+export const QualityService = {
+  async listInspections(params?: { type?: string; status?: string; productId?: string }) {
+    const res = await apiClient.get<ApiResponse<QualityInspection[]>>('/quality/inspections', { params });
+    return res.data.data;
+  },
+
+  async getInspection(id: string) {
+    const res = await apiClient.get<ApiResponse<QualityInspection>>(`/quality/inspections/${id}`);
+    return res.data.data;
+  },
+
+  async createInspection(payload: {
+    type: string;
+    productId: string;
+    bomId?: string;
+    workOrderId?: string;
+    poId?: string;
+    sampleSize?: number;
+    notes?: string;
+  }) {
+    const res = await apiClient.post<ApiResponse<QualityInspection>>('/quality/inspections', payload);
+    return res.data.data;
+  },
+
+  async recordResult(
+    id: string,
+    payload: {
+      passedQuantity: number;
+      failedQuantity: number;
+      status: string;
+      notes?: string;
+    }
+  ) {
+    const res = await apiClient.post<ApiResponse<QualityInspection>>(`/quality/inspections/${id}/result`, payload);
+    return res.data.data;
+  },
+
+  async listNCRs(params?: { status?: string; severity?: string }) {
+    const res = await apiClient.get<ApiResponse<QualityNonConformance[]>>('/quality/ncrs', { params });
+    return res.data.data;
+  },
+
+  async getNCR(id: string) {
+    const res = await apiClient.get<ApiResponse<QualityNonConformance>>(`/quality/ncrs/${id}`);
+    return res.data.data;
+  },
+
+  async createNCR(payload: {
+    inspectionId?: string;
+    productId: string;
+    severity: string;
+    title: string;
+    description: string;
+    assignedTo?: string;
+  }) {
+    const res = await apiClient.post<ApiResponse<QualityNonConformance>>('/quality/ncrs', payload);
+    return res.data.data;
+  },
+
+  async updateNCR(
+    id: string,
+    payload: {
+      status?: string;
+      rootCause?: string;
+      disposition?: string;
+      capaPlan?: string;
+      assignedTo?: string;
+    }
+  ) {
+    const res = await apiClient.patch<ApiResponse<QualityNonConformance>>(`/quality/ncrs/${id}`, payload);
+    return res.data.data;
+  },
+};
+
+export const NotificationService = {
+  async listNotifications() {
+    const res = await apiClient.get<ApiResponse<any[]>>('/notifications');
+    return res.data;
+  },
+
+  async getUnreadCount() {
+    const res = await apiClient.get<ApiResponse<{ count: number }>>('/notifications/unread-count');
+    return res.data.data.count;
+  },
+
+  async markAsRead(id: string) {
+    const res = await apiClient.patch<ApiResponse<any>>(`/notifications/${id}/read`);
+    return res.data.data;
+  },
+
+  async markAllAsRead() {
+    const res = await apiClient.post<ApiResponse<any>>('/notifications/mark-all-read');
+    return res.data.data;
+  },
+
+  async dismissNotification(id: string) {
+    const res = await apiClient.delete<ApiResponse<any>>(`/notifications/${id}`);
+    return res.data.data;
+  },
+};
+
+export const ApprovalsWorkflowService = {
+  async listPending(domain?: string, overdue?: boolean) {
+    const res = await apiClient.get<ApiResponse<any[]>>('/approvals/pending', {
+      params: { domain, overdue: overdue ? 'true' : undefined },
+    });
+    return res.data;
+  },
+
+  async getStats() {
+    const res = await apiClient.get<ApiResponse<any>>('/approvals/stats');
+    return res.data.data;
+  },
+
+  async sendReminders() {
+    const res = await apiClient.post<ApiResponse<any>>('/approvals/remind');
+    return res.data.data;
+  },
+};
+
+export const ActivityService = {
+  async listActivities(params?: any) {
+    const res = await apiClient.get<ApiResponse<any[]>>('/activity-timeline', { params });
+    return res.data;
+  },
+
+  async getEntityTimeline(entityType: string, entityId: string) {
+    const res = await apiClient.get<ApiResponse<any[]>>(`/activity-timeline/${entityType}/${entityId}`);
+    return res.data;
+  },
+};
+
+export const DashboardService = {
+  async getMetrics() {
+    const res = await apiClient.get<ApiResponse<any>>('/dashboard/metrics');
+    return res.data.data;
+  },
+};
+
+export const ReportsService = {
+  async getEngineeringReport() {
+    const res = await apiClient.get<ApiResponse<any>>('/reports/engineering');
+    return res.data.data;
+  },
+
+  async getInventoryReport() {
+    const res = await apiClient.get<ApiResponse<any>>('/reports/inventory');
+    return res.data.data;
+  },
+
+  async getPurchasingReport() {
+    const res = await apiClient.get<ApiResponse<any>>('/reports/purchasing');
+    return res.data.data;
+  },
+
+  async getManufacturingReport() {
+    const res = await apiClient.get<ApiResponse<any>>('/reports/manufacturing');
+    return res.data.data;
+  },
+
+  async getQualityReport() {
+    const res = await apiClient.get<ApiResponse<any>>('/reports/quality');
+    return res.data.data;
+  },
+
+  async exportCSV(type: string) {
+    const res = await apiClient.get(`/reports/export?type=${type}`, {
+      responseType: 'blob',
+    });
+    return res.data;
+  },
+};
+
+export const AdminService = {
+  async listUsers(params?: any) {
+    const res = await apiClient.get<ApiResponse<any[]>>('/admin/users', { params });
+    return res.data;
+  },
+
+  async createUser(payload: any) {
+    const res = await apiClient.post<ApiResponse<any>>('/admin/users', payload);
+    return res.data.data;
+  },
+
+  async updateUserStatus(id: string, status: string) {
+    const res = await apiClient.patch<ApiResponse<any>>(`/admin/users/${id}/status`, { status });
+    return res.data.data;
+  },
+
+  async updateUserRoles(id: string, roleIds: string[]) {
+    const res = await apiClient.put<ApiResponse<any>>(`/admin/users/${id}/roles`, { roleIds });
+    return res.data.data;
+  },
+
+  async listRoles() {
+    const res = await apiClient.get<ApiResponse<any[]>>('/admin/roles');
+    return res.data.data;
+  },
+
+  async listPermissions() {
+    const res = await apiClient.get<ApiResponse<any[]>>('/admin/permissions');
+    return res.data.data;
+  },
+
+  async listAuditLogs(params?: any) {
+    const res = await apiClient.get<ApiResponse<any[]>>('/admin/audit-logs', { params });
+    return res.data;
+  },
+
+  async getSystemHealth() {
+    const res = await apiClient.get<ApiResponse<any>>('/admin/system-health');
     return res.data.data;
   },
 };

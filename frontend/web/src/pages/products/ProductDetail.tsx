@@ -6,13 +6,15 @@ import { PageHeader, EmptyState } from '../../components/ui/Cards';
 import { Button } from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badges';
 import { Box, Layers, Plus, ArrowLeft, History, X, ArrowRight, Edit3 } from 'lucide-react';
-import { formatDate } from '../../lib/utils';
+import { formatDate, formatCurrency } from '../../lib/utils';
 import { ProductStatus } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 export function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { hasPermission } = useAuth();
 
   const [isBomModalOpen, setIsBomModalOpen] = useState(false);
   const [bomNumber, setBomNumber] = useState('');
@@ -85,24 +87,28 @@ export function ProductDetail() {
         description={product.description || 'Hardware part specification definition.'}
       >
         <StatusBadge status={product.status} />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            setEditName(product.name);
-            setEditDesc(product.description || '');
-            setEditStatus(product.status as ProductStatus);
-            setError(null);
-            setIsEditOpen(true);
-          }}
-        >
-          <Edit3 className="w-4 h-4 mr-1.5" />
-          <span>Edit Product</span>
-        </Button>
-        <Button size="sm" onClick={() => setIsBomModalOpen(true)}>
-          <Plus className="w-4 h-4 mr-1.5" />
-          <span>Create BOM</span>
-        </Button>
+        {hasPermission('product:write') && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setEditName(product.name);
+              setEditDesc(product.description || '');
+              setEditStatus(product.status as ProductStatus);
+              setError(null);
+              setIsEditOpen(true);
+            }}
+          >
+            <Edit3 className="w-4 h-4 mr-1.5" />
+            <span>Edit Product</span>
+          </Button>
+        )}
+        {hasPermission('bom:write') && (
+          <Button size="sm" onClick={() => setIsBomModalOpen(true)}>
+            <Plus className="w-4 h-4 mr-1.5" />
+            <span>Create BOM</span>
+          </Button>
+        )}
       </PageHeader>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -178,10 +184,12 @@ export function ProductDetail() {
             <Layers className="w-4 h-4 text-primary" />
             <h3 className="text-sm font-bold text-slate-900">Associated Bills of Materials (BOM)</h3>
           </div>
-          <Button size="sm" onClick={() => setIsBomModalOpen(true)}>
-            <Plus className="w-4 h-4 mr-1.5" />
-            <span>New BOM</span>
-          </Button>
+          {hasPermission('bom:write') && (
+            <Button size="sm" onClick={() => setIsBomModalOpen(true)}>
+              <Plus className="w-4 h-4 mr-1.5" />
+              <span>New BOM</span>
+            </Button>
+          )}
         </div>
 
         {(!product.boms || product.boms.length === 0) ? (
@@ -216,7 +224,7 @@ export function ProductDetail() {
                         {compCount} components
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
-                        ${totalCost.toFixed(2)}
+                        {formatCurrency(totalCost)}
                       </td>
                       <td className="py-2.5 px-3">
                         <StatusBadge status={b.status} />

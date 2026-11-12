@@ -2,7 +2,40 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
-import { Shield, AlertCircle, ArrowRight } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react';
+
+const isDemoEnvironment = import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEMO_LOGIN === 'true';
+
+const DEMO_ACCOUNTS = [
+  {
+    name: 'Admin',
+    role: 'ADMINISTRATOR',
+    email: 'admin@ecoflow.internal',
+    password: isDemoEnvironment ? 'Password123!' : '',
+    badgeColor: 'bg-purple-100 text-purple-700 border-purple-200',
+  },
+  {
+    name: 'Lead Engineer',
+    role: 'LEAD_ENGINEER',
+    email: 'engineer@ecoflow.internal',
+    password: isDemoEnvironment ? 'Password123!' : '',
+    badgeColor: 'bg-blue-100 text-blue-700 border-blue-200',
+  },
+  {
+    name: 'Approver',
+    role: 'APPROVER',
+    email: 'approver@ecoflow.internal',
+    password: isDemoEnvironment ? 'Password123!' : '',
+    badgeColor: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  },
+  {
+    name: 'Operator',
+    role: 'OPERATOR',
+    email: 'operator@ecoflow.internal',
+    password: isDemoEnvironment ? 'Password123!' : '',
+    badgeColor: 'bg-amber-100 text-amber-700 border-amber-200',
+  },
+];
 
 export function Login() {
   const { login } = useAuth();
@@ -10,6 +43,7 @@ export function Login() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -30,6 +64,13 @@ export function Login() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSelectDemo = (acc: typeof DEMO_ACCOUNTS[0]) => {
+    setEmail(acc.email);
+    setPassword(acc.password);
+    setSelectedRole(acc.role);
+    setError(null);
   };
 
   return (
@@ -59,7 +100,10 @@ export function Login() {
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setSelectedRole(null);
+                  }}
                   placeholder="engineer@ecoflow.internal"
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                 />
@@ -73,7 +117,10 @@ export function Login() {
                   type="password"
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setSelectedRole(null);
+                  }}
                   placeholder="••••••••••••"
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                 />
@@ -86,61 +133,42 @@ export function Login() {
             </Button>
           </form>
 
-          {/* Quick Demo Credentials Autofill */}
-          <div className="mt-6 border-t border-slate-100 pt-4">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-              Autofill Demo RBAC Accounts
-            </span>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('admin@ecoflow.internal');
-                  setPassword('Password123!');
-                }}
-                className="p-2 text-left rounded-lg border border-slate-200 hover:border-primary hover:bg-slate-50 transition-colors"
-              >
-                <div className="font-semibold text-slate-800">Admin</div>
-                <div className="text-[10px] text-slate-400">ADMINISTRATOR</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('engineer@ecoflow.internal');
-                  setPassword('Password123!');
-                }}
-                className="p-2 text-left rounded-lg border border-slate-200 hover:border-primary hover:bg-slate-50 transition-colors"
-              >
-                <div className="font-semibold text-slate-800">Lead Engineer</div>
-                <div className="text-[10px] text-slate-400">LEAD_ENGINEER</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('approver@ecoflow.internal');
-                  setPassword('Password123!');
-                }}
-                className="p-2 text-left rounded-lg border border-slate-200 hover:border-primary hover:bg-slate-50 transition-colors"
-              >
-                <div className="font-semibold text-slate-800">Approver</div>
-                <div className="text-[10px] text-slate-400">APPROVER</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('operator@ecoflow.internal');
-                  setPassword('Password123!');
-                }}
-                className="p-2 text-left rounded-lg border border-slate-200 hover:border-primary hover:bg-slate-50 transition-colors"
-              >
-                <div className="font-semibold text-slate-800">Operator</div>
-                <div className="text-[10px] text-slate-400">OPERATOR</div>
-              </button>
+          {/* Quick Demo Credentials Autofill — Only rendered in development/demo environments */}
+          {isDemoEnvironment && (
+            <div className="mt-6 border-t border-slate-100 pt-4">
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Autofill Demo RBAC Accounts
+                </span>
+                <span className="text-[10px] text-teal-600 font-medium bg-teal-50 px-2 py-0.5 rounded-full border border-teal-100">
+                  Demo Mode
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {DEMO_ACCOUNTS.map((acc) => {
+                  const isSelected = selectedRole === acc.role;
+                  return (
+                    <button
+                      key={acc.role}
+                      type="button"
+                      onClick={() => handleSelectDemo(acc)}
+                      className={`p-2.5 text-left rounded-xl border transition-all relative ${
+                        isSelected
+                          ? 'border-teal-600 bg-teal-50/70 ring-2 ring-teal-600/20 shadow-sm'
+                          : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-semibold text-slate-900">{acc.name}</span>
+                        {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 shrink-0" />}
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-mono tracking-tight">{acc.role}</div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="mt-4 border-t border-slate-100 pt-4 text-center">
             <span className="text-xs text-slate-500">Need a custom account? </span>

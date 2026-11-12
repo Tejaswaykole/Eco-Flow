@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { RoleName } from '../../types';
 import { cn } from '../../lib/utils';
 import {
   LayoutDashboard,
@@ -15,28 +16,51 @@ import {
   Settings,
   ShieldCheck,
   ChevronRight,
+  Truck,
+  ShoppingCart,
+  Archive,
+  Factory,
+  ShieldAlert,
+  FileBarChart,
+  BellRing,
 } from 'lucide-react';
 
 export function Sidebar() {
   const { hasRole, hasPermission } = useAuth();
 
-  const navigation = [
+  const allNavItems: {
+    name: string;
+    href: string;
+    icon: any;
+    exact?: boolean;
+    permission?: string;
+    role?: RoleName;
+  }[] = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, exact: true },
-    { name: 'Categories', href: '/categories', icon: Tag },
-    { name: 'Products', href: '/products', icon: Box },
-    { name: 'Bills of Materials', href: '/boms', icon: Layers },
-    { name: 'Change Requests (ECR)', href: '/ecrs', icon: ClipboardList },
-    { name: 'Change Orders (ECO)', href: '/ecos', icon: GitPullRequest },
-    { name: 'Change Notices (ECN)', href: '/ecns', icon: Bell },
+    { name: 'Categories', href: '/categories', icon: Tag, permission: 'product:read' },
+    { name: 'Products', href: '/products', icon: Box, permission: 'product:read' },
+    { name: 'Bills of Materials', href: '/boms', icon: Layers, permission: 'bom:read' },
+    { name: 'Change Requests (ECR)', href: '/ecrs', icon: ClipboardList, permission: 'ecr:read' },
+    { name: 'Change Orders (ECO)', href: '/ecos', icon: GitPullRequest, permission: 'eco:read' },
+    { name: 'Change Notices (ECN)', href: '/ecns', icon: Bell, permission: 'ecn:read' },
+    { name: 'Suppliers', href: '/suppliers', icon: Truck, permission: 'supplier:read' },
+    { name: 'Purchasing', href: '/purchasing', icon: ShoppingCart, permission: 'purchasing:read' },
+    { name: 'Inventory & Stock', href: '/inventory', icon: Archive, permission: 'inventory:read' },
+    { name: 'Manufacturing (WO)', href: '/manufacturing', icon: Factory, permission: 'manufacturing:read' },
+    { name: 'Quality & NCR', href: '/quality', icon: ShieldAlert, permission: 'quality:read' },
+    { name: 'Reports & Analytics', href: '/reports', icon: FileBarChart, permission: 'reports:read' },
+    { name: 'Notifications', href: '/notifications', icon: BellRing },
+    { name: 'Approvals', href: '/approvals', icon: CheckSquare, permission: 'approvals:read' },
+    { name: 'Users & Roles', href: '/users', icon: Users, permission: 'user:read' },
+    { name: 'System Admin', href: '/admin', icon: Settings, permission: 'admin:all' },
   ];
 
-  if (hasRole('APPROVER') || hasRole('ADMINISTRATOR') || hasPermission('eco:approve')) {
-    navigation.push({ name: 'Approvals', href: '/approvals', icon: CheckSquare });
-  }
-
-  if (hasRole('ADMINISTRATOR') || hasPermission('admin:all')) {
-    navigation.push({ name: 'Users & Roles', href: '/users', icon: Users });
-  }
+  const navigation = allNavItems.filter((item) => {
+    if (hasRole('ADMINISTRATOR') || hasPermission('admin:all')) return true;
+    if (item.permission && !hasPermission(item.permission)) return false;
+    if (item.role && !hasRole(item.role)) return false;
+    return true;
+  });
 
   return (
     <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 min-h-screen text-slate-300">

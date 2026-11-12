@@ -7,9 +7,11 @@ import { StatusBadge, PriorityBadge } from '../../components/ui/Badges';
 import { GitPullRequest, Plus, X, Search } from 'lucide-react';
 import { formatDate } from '../../lib/utils';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 export function ECOList() {
   const queryClient = useQueryClient();
+  const { hasPermission } = useAuth();
   const [statusFilter, setStatusFilter] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
@@ -60,10 +62,12 @@ export function ECOList() {
         title="Engineering Change Orders (ECO)"
         description="Formal engineering change workflow, revision freezes, and multi-stage approval releases."
       >
-        <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-          <Plus className="w-4 h-4 mr-1.5" />
-          <span>New Change Order</span>
-        </Button>
+        {hasPermission('eco:create') && (
+          <Button size="sm" onClick={() => setIsCreateOpen(true)}>
+            <Plus className="w-4 h-4 mr-1.5" />
+            <span>New Change Order</span>
+          </Button>
+        )}
       </PageHeader>
 
       <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">

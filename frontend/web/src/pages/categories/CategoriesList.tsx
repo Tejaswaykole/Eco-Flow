@@ -64,7 +64,7 @@ export function CategoriesList() {
   const canEdit = (cat: any) => {
     if (!user) return false;
     if (hasRole('ADMINISTRATOR')) return true;
-    return cat.created_by === user.id;
+    return (hasPermission('product:write') || hasRole('LEAD_ENGINEER')) && (cat.created_by === user.id || hasRole('LEAD_ENGINEER'));
   };
 
   const filteredCategories = categories.filter((c) =>

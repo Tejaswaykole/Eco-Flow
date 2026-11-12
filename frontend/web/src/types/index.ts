@@ -134,13 +134,15 @@ export interface BOMVersion {
   created_at: string;
 }
 
+export type BOMStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+
 export interface BOM {
   id: string;
   bom_number: string;
   product_id: string;
   product?: Product;
   current_version: number;
-  status: 'DRAFT' | 'RELEASED' | 'OBSOLETE';
+  status: BOMStatus;
   description?: string;
   components?: BOMComponent[];
   bom_versions?: BOMVersion[];
@@ -369,4 +371,602 @@ export interface ECN {
   distributions?: ECNDistribution[];
   dispositions?: ECNMaterialDisposition[];
 }
+
+// ==============================================================================
+// Business Module Types: Suppliers, Inventory, Purchasing, Manufacturing, Quality
+// ==============================================================================
+
+export type SupplierStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING_QUALIFICATION' | 'BLOCKED';
+
+export interface Supplier {
+  id: string;
+  supplier_code: string;
+  name: string;
+  status: SupplierStatus;
+  contact_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  rating?: number | null;
+  created_at: string;
+  updated_at: string;
+  products?: SupplierProduct[];
+  purchase_orders?: PurchaseOrder[];
+  quotations?: SupplierQuotation[];
+  mappedProductCount?: number;
+  mappedProducts?: {
+    id: string;
+    productId: string;
+    productName: string;
+    partNumber: string;
+    categoryName: string;
+    supplierPartNumber?: string | null;
+    unitPrice: number;
+    currency: string;
+    leadTimeDays: number;
+    minimumOrderQty: number;
+    isPreferred: boolean;
+    status: string;
+  }[];
+  historicalPurchaseOrderCount?: number;
+  completedPurchaseOrderCount?: number;
+  repeatPurchaseCount?: number;
+  latestQuotedPrice?: { price: number; currency: string } | null;
+  avgLeadTimeDays?: number | null;
+}
+
+export interface SupplierProduct {
+  id: string;
+  supplier_id: string;
+  product_id: string;
+  supplier_part_number?: string | null;
+  lead_time_days?: number | null;
+  unit_price: number | string;
+  minimum_order_qty: number | string;
+  currency: string;
+  is_preferred: boolean;
+  status?: string;
+  valid_until?: string | null;
+  product?: Product;
+}
+
+export interface SupplierDashboardStats {
+  totalSuppliers: number;
+  activeSuppliers: number;
+  inactiveSuppliers: number;
+  totalMappedProducts: number;
+  totalPurchaseOrders: number;
+  completedPurchaseOrders: number;
+  repeatSuppliers: number;
+  pendingRFQs: number;
+  pendingQuotations: number;
+  activeNegotiations: number;
+}
+
+export interface RFQItem {
+  id: string;
+  rfq_id: string;
+  product_id: string;
+  quantity_required: number | string;
+  notes?: string | null;
+  product?: Product;
+}
+
+export interface RFQSupplier {
+  id: string;
+  rfq_id: string;
+  supplier_id: string;
+  status: 'INVITED' | 'RESPONDED' | 'DECLINED';
+  supplier?: Supplier;
+}
+
+export interface RFQ {
+  id: string;
+  rfq_number: string;
+  title: string;
+  status: 'DRAFT' | 'OPEN' | 'CLOSED' | 'CANCELLED';
+  submission_date: string;
+  deadline_date?: string | null;
+  delivery_date?: string | null;
+  notes?: string | null;
+  created_by: string;
+  created_at: string;
+  items: RFQItem[];
+  suppliers: RFQSupplier[];
+  quotations?: SupplierQuotation[];
+}
+
+export interface NegotiationEvent {
+  id: string;
+  quotation_id: string;
+  event_type: 'COUNTER_OFFER' | 'REVISED_OFFER' | 'ACCEPTED' | 'REJECTED';
+  actor_id: string;
+  offered_price: number | string;
+  counter_price: number | string;
+  currency: string;
+  message?: string | null;
+  previous_status: string;
+  new_status: string;
+  created_at: string;
+  actor?: { id: string; first_name: string; last_name: string; email: string };
+}
+
+export interface SupplierQuotation {
+  id: string;
+  quotation_number: string;
+  rfq_id?: string | null;
+  supplier_id: string;
+  product_id: string;
+  supplier_part_number?: string | null;
+  offered_quantity: number | string;
+  unit_price: number | string;
+  currency: string;
+  tax_amount: number | string;
+  shipping_amount: number | string;
+  total_amount: number | string;
+  lead_time_days?: number | null;
+  minimum_order_quantity: number | string;
+  valid_until?: string | null;
+  terms_conditions?: string | null;
+  status: 'DRAFT' | 'REQUESTED' | 'QUOTED' | 'COUNTER_OFFERED' | 'REVISED' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
+  converted_po_id?: string | null;
+  created_at: string;
+  supplier?: Supplier;
+  product?: Product;
+  rfq?: RFQ;
+  negotiation_events?: NegotiationEvent[];
+}
+
+export interface SupplierPerformanceAnalytics {
+  supplierId: string;
+  supplierName: string;
+  supplierCode: string;
+  totalPurchaseOrders: number;
+  completedPurchaseOrders: number;
+  cancelledPurchaseOrders: number;
+  repeatPurchaseOrders: number;
+  repeatPurchaseFrequency: number;
+  totalPurchasedValue: number;
+  currency: string;
+  lastPurchaseDate?: string | null;
+  averageLeadTimeDays?: number | null;
+  onTimeDeliveryPercentage?: number | null;
+  inspectedQuantity: number;
+  rejectedQuantity: number;
+  qualityRejectionPercentage?: number | null;
+  openNegotiations: number;
+  acceptedQuotations: number;
+  ranking: {
+    score: number;
+    grade: 'TIER_1_PREFERRED' | 'TIER_2_QUALIFIED' | 'TIER_3_STANDARD';
+    reasons: string[];
+  };
+}
+
+export type WarehouseStatus = 'ACTIVE' | 'INACTIVE';
+
+export interface Warehouse {
+  id: string;
+  code: string;
+  name: string;
+  location?: string | null;
+  status: WarehouseStatus;
+  created_at: string;
+  updated_at: string;
+  _count?: { inventory_items: number };
+}
+
+export interface InventoryItem {
+  id: string;
+  product_id: string;
+  warehouse_id: string;
+  quantity_on_hand: number | string;
+  quantity_reserved: number | string;
+  min_threshold: number | string;
+  max_threshold?: number | string | null;
+  unit_of_measure: string;
+  created_at: string;
+  updated_at: string;
+  product?: Product;
+  warehouse?: Warehouse;
+}
+
+export type InventoryTransactionType = 'RECEIPT' | 'ISSUE' | 'ADJUSTMENT' | 'SCRAP' | 'TRANSFER' | 'RESERVATION';
+
+export interface InventoryTransaction {
+  id: string;
+  item_id: string;
+  type: InventoryTransactionType;
+  quantity: number | string;
+  unit_cost: number | string;
+  total_cost: number | string;
+  reference_type?: string | null;
+  reference_id?: string | null;
+  notes?: string | null;
+  performed_by: string;
+  created_at: string;
+  item?: InventoryItem;
+  performer?: { id: string; email: string; first_name: string; last_name: string };
+}
+
+export type PurchaseOrderStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'ORDERED' | 'PARTIALLY_RECEIVED' | 'RECEIVED' | 'CANCELLED';
+
+export interface PurchaseOrder {
+  id: string;
+  po_number: string;
+  supplier_id: string;
+  status: PurchaseOrderStatus;
+  order_date: string;
+  expected_delivery_date?: string | null;
+  total_amount: number | string;
+  notes?: string | null;
+  created_by: string;
+  approved_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  supplier?: Supplier;
+  creator?: { id: string; email: string; first_name: string; last_name: string };
+  approver?: { id: string; email: string; first_name: string; last_name: string } | null;
+  lines?: PurchaseOrderLine[];
+}
+
+export interface PurchaseOrderLine {
+  id: string;
+  po_id: string;
+  line_number: number;
+  product_id: string;
+  quantity_ordered: number | string;
+  quantity_received: number | string;
+  unit_price: number | string;
+  total_price: number | string;
+  unit_of_measure: string;
+  product?: Product;
+}
+
+export type WorkOrderStatus = 'DRAFT' | 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+
+export interface WorkOrder {
+  id: string;
+  wo_number: string;
+  product_id: string;
+  bom_id: string;
+  bom_version_id?: string | null;
+  target_quantity: number | string;
+  completed_quantity: number | string;
+  rejected_quantity: number | string;
+  status: WorkOrderStatus;
+  start_date?: string | null;
+  end_date?: string | null;
+  created_by: string;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  product?: Product;
+  bom?: BOM;
+  bom_version?: BOMVersion | null;
+  creator?: { id: string; email: string; first_name: string; last_name: string };
+  allocations?: WorkOrderAllocation[];
+  inspections?: QualityInspection[];
+}
+
+export interface WorkOrderAllocation {
+  id: string;
+  work_order_id: string;
+  product_id: string;
+  required_quantity: number | string;
+  allocated_quantity: number | string;
+  consumed_quantity: number | string;
+  unit_of_measure: string;
+  unit_cost: number | string;
+  total_cost: number | string;
+  product?: Product;
+}
+
+export type InspectionType = 'RECEIVING' | 'IN_PROCESS' | 'FINAL' | 'FIRST_ARTICLE';
+export type InspectionStatus = 'PENDING' | 'IN_PROGRESS' | 'PASSED' | 'FAILED' | 'CONDITIONALLY_PASSED';
+
+export interface QualityInspection {
+  id: string;
+  inspection_number: string;
+  type: InspectionType;
+  status: InspectionStatus;
+  product_id: string;
+  bom_id?: string | null;
+  work_order_id?: string | null;
+  po_id?: string | null;
+  inspector_id?: string | null;
+  sample_size: number | string;
+  passed_quantity: number | string;
+  failed_quantity: number | string;
+  notes?: string | null;
+  conducted_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  product?: Product;
+  work_order?: WorkOrder | null;
+  purchase_order?: PurchaseOrder | null;
+  inspector?: { id: string; email: string; first_name: string; last_name: string } | null;
+  non_conformances?: QualityNonConformance[];
+}
+
+export type NCRSeverity = 'MINOR' | 'MAJOR' | 'CRITICAL';
+export type NCRStatus = 'OPEN' | 'UNDER_INVESTIGATION' | 'CAPA_REQUIRED' | 'CLOSED' | 'REJECTED';
+
+export interface QualityNonConformance {
+  id: string;
+  ncr_number: string;
+  inspection_id?: string | null;
+  product_id: string;
+  severity: NCRSeverity;
+  status: NCRStatus;
+  title: string;
+  description: string;
+  root_cause?: string | null;
+  disposition?: string | null;
+  capa_plan?: string | null;
+  assigned_to?: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  product?: Product;
+  creator?: { id: string; email: string; first_name: string; last_name: string };
+  assignee?: { id: string; email: string; first_name: string; last_name: string } | null;
+}
+
+// ==============================================================================
+// Milestone 09 & 10 Types: Notifications, Approvals, Reports & Admin
+// ==============================================================================
+
+export type NotificationType =
+  | 'ECO_SUBMITTED'
+  | 'ECO_APPROVED'
+  | 'ECO_REJECTED'
+  | 'APPROVAL_REQUESTED'
+  | 'SYSTEM_ALERT';
+
+export interface NotificationItem {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  link?: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface PendingApprovalItem {
+  id: string;
+  entityType: 'ECO' | 'ECR' | 'ECN' | 'PURCHASE_ORDER' | 'NCR';
+  referenceNumber: string;
+  title: string;
+  status: string;
+  priority?: string;
+  submittedBy?: { id: string; name: string; email: string };
+  assignedTo?: { id: string; name: string; email: string };
+  submittedAt: string;
+  dueDate: string;
+  isOverdue: boolean;
+  link: string;
+}
+
+export interface ApprovalStats {
+  totalPending: number;
+  totalOverdue: number;
+  byDomain: {
+    eco: { pending: number; overdue: number };
+    ecr: { pending: number; overdue: number };
+    ecn: { pending: number; overdue: number };
+    po: { pending: number; overdue: number };
+    ncr: { pending: number; overdue: number };
+  };
+}
+
+export interface ActivityLogItem {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  severity: string;
+  oldValues?: any;
+  newValues?: any;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: string;
+  user?: {
+    id: string;
+    email: string;
+    name: string;
+  } | null;
+}
+
+export interface DashboardMetrics {
+  kpis: {
+    products: number;
+    activeBOMs: number;
+    pendingECRs: number;
+    activeECOs: number;
+    pendingApprovals: number;
+    issuedECNs: number;
+    openPOs: number;
+    lowStockAlerts: number;
+    activeWOs: number;
+    openNCRs: number;
+    inventoryValuationINR: string;
+    poSpendINR: string;
+    currency: string;
+    currencySymbol: string;
+  };
+  charts: {
+    ecoDistribution: { status: string; count: number }[];
+    poDistribution: { status: string; count: number }[];
+    woDistribution: { status: string; count: number }[];
+    ncrSeverity: { severity: string; count: number }[];
+  };
+  recentActivity: {
+    id: string;
+    action: string;
+    entityType: string;
+    entityId: string;
+    createdAt: string;
+    user: string;
+  }[];
+}
+
+export interface EngineeringReportData {
+  boms: {
+    id: string;
+    bomNumber: string;
+    productPartNumber: string;
+    productName: string;
+    componentCount: number;
+    totalCostINR: string;
+  }[];
+  ecrStats: {
+    total: number;
+    avgTurnaroundDays: string;
+    byStatus: Record<string, number>;
+  };
+  ecoStats: {
+    total: number;
+    byStatus: Record<string, number>;
+  };
+}
+
+export interface InventoryReportData {
+  warehouses: {
+    id: string;
+    name: string;
+    code: string;
+    itemCount: number;
+    totalValuationINR: string;
+  }[];
+  lowStockItems: {
+    id: string;
+    partNumber: string;
+    productName: string;
+    warehouse: string;
+    quantityOnHand: string;
+    minThreshold: string;
+    unitOfMeasure: string;
+  }[];
+  recentMovements: {
+    id: string;
+    type: string;
+    partNumber: string;
+    productName: string;
+    warehouse: string;
+    quantity: string;
+    unitCostINR: string;
+    totalCostINR: string;
+    referenceType: string;
+    createdAt: string;
+  }[];
+}
+
+export interface PurchasingReportData {
+  supplierSpend: {
+    id: string;
+    name: string;
+    code: string;
+    totalSpendINR: string;
+    orderCount: number;
+  }[];
+  statusBreakdown: {
+    status: string;
+    count: number;
+    totalINR: string;
+  }[];
+  totalOrders: number;
+}
+
+export interface ManufacturingReportData {
+  totalWorkOrders: number;
+  statusBreakdown: Record<string, number>;
+  quantities: {
+    totalPlanned: string;
+    totalCompleted: string;
+    totalRejected: string;
+    scrapRatePercent: string;
+  };
+  workOrders: {
+    id: string;
+    woNumber: string;
+    productPartNumber: string;
+    productName: string;
+    status: string;
+    targetQty: string;
+    completedQty: string;
+    rejectedQty: string;
+    startDate?: string | null;
+    endDate?: string | null;
+  }[];
+}
+
+export interface QualityReportData {
+  inspections: {
+    total: number;
+    statusBreakdown: Record<string, number>;
+    passRatePercent: string;
+    passedQty: string;
+    failedQty: string;
+  };
+  ncrs: {
+    total: number;
+    severityBreakdown: Record<string, number>;
+    statusBreakdown: Record<string, number>;
+    capaPlansDefined: number;
+  };
+}
+
+export interface AdminUserItem {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  roles: { id: string; name: string; description?: string }[];
+}
+
+export interface AdminRoleItem {
+  id: string;
+  name: string;
+  description?: string;
+  isSystem: boolean;
+  userCount: number;
+  permissions: { id: string; code: string; description?: string; module: string }[];
+}
+
+export interface SystemHealthData {
+  status: 'HEALTHY' | 'DEGRADED';
+  database: {
+    connected: boolean;
+    version: string;
+    latencyMs: number;
+  };
+  process: {
+    uptimeSeconds: number;
+    nodeVersion: string;
+    platform: string;
+    memory: {
+      rssMb: string;
+      heapTotalMb: string;
+      heapUsedMb: string;
+    };
+  };
+  counts: {
+    users: number;
+    products: number;
+    boms: number;
+    ecrs: number;
+    ecos: number;
+    purchaseOrders: number;
+    workOrders: number;
+    ncrs: number;
+    auditLogs: number;
+  };
+}
+
 

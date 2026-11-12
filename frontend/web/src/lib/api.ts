@@ -10,6 +10,14 @@ export interface ApiResponse<T = any> {
     total?: number;
     pages?: number;
   };
+  pagination?: {
+    page?: number;
+    limit?: number;
+    total?: number;
+    totalPages?: number;
+    unreadCount?: number;
+    overdueCount?: number;
+  };
   error?: {
     code: string;
     message: string;

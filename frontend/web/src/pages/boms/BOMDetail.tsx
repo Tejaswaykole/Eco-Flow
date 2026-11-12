@@ -21,6 +21,8 @@ import {
   User,
   Clock,
   ArrowUpRight,
+  Network,
+  CheckCircle,
 } from 'lucide-react';
 import { formatCurrency, formatDate, formatDateTime } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
@@ -63,7 +65,7 @@ export function BOMDetail() {
   const [error, setError] = useState<string | null>(null);
 
   const [editingComponent, setEditingComponent] = useState<any | null>(null);
-  const [activeTab, setActiveTab] = useState<'items' | 'tree' | 'exploded' | 'history'>('items');
+  const [activeTab, setActiveTab] = useState<'items' | 'tree' | 'exploded' | 'where-used' | 'history'>('items');
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
 
   // Sub-Assembly Form States
@@ -90,6 +92,12 @@ export function BOMDetail() {
     queryKey: ['bom-exploded', id],
     queryFn: () => BOMService.getBOMExploded(id!),
     enabled: !!id && activeTab === 'exploded',
+  });
+
+  const { data: bomWhereUsed = [], isLoading: isWhereUsedLoading } = useQuery({
+    queryKey: ['bom-where-used', id],
+    queryFn: () => BOMService.getBOMWhereUsed(id!),
+    enabled: !!id && activeTab === 'where-used',
   });
 
   const { data: bom, isLoading } = useQuery({
@@ -153,6 +161,17 @@ export function BOMDetail() {
     },
   });
 
+  const releaseBomMutation = useMutation({
+    mutationFn: () => BOMService.releaseBOM(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['boms', id] });
+      queryClient.invalidateQueries({ queryKey: ['bom', id] });
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.error?.message || 'Failed to release BOM');
+    },
+  });
+
   if (isLoading) {
     return <div className="p-8 text-center text-sm text-slate-500">Loading BOM assembly structure...</div>;
   }
@@ -174,6 +193,7 @@ export function BOMDetail() {
   const liveSubtotal = (Number(quantity || 0) * Number(unitCost || 0)).toFixed(2);
   const isDraft = bom.status === 'DRAFT';
   const canEdit = isDraft && (hasRole('LEAD_ENGINEER') || hasRole('ADMINISTRATOR') || hasPermission('bom:write'));
+  const canRelease = isDraft && (hasRole('LEAD_ENGINEER') || hasRole('ADMINISTRATOR') || hasPermission('bom:release'));
 
   // Component Categorization breakdown
   const rawMaterialCost = components
@@ -198,6 +218,18 @@ export function BOMDetail() {
         description={bom.description || 'Hierarchical Bill of Materials & Component Recipe Breakdown.'}
       >
         <StatusBadge status={bom.status} />
+        {canRelease && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => releaseBomMutation.mutate()}
+            isLoading={releaseBomMutation.isPending}
+            disabled={bom.components?.length === 0}
+          >
+            <CheckCircle className="w-4 h-4 mr-1.5 text-emerald-600" />
+            <span>Release BOM</span>
+          </Button>
+        )}
         {canEdit && (
           <Button size="sm" onClick={() => setIsComponentModalOpen(true)}>
             <Plus className="w-4 h-4 mr-1.5" />
@@ -304,6 +336,18 @@ export function BOMDetail() {
         >
           <Calculator className="w-4 h-4" />
           <span>Exploded Raw Materials View</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('where-used')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
+            activeTab === 'where-used'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Network className="w-4 h-4" />
+          <span>Where-Used Analysis ({bomWhereUsed.length})</span>
         </button>
 
         <button
@@ -450,6 +494,68 @@ export function BOMDetail() {
                       </td>
                       <td className="py-2.5 px-3 text-right">{formatCurrency(item.unit_cost)}</td>
                       <td className="py-2.5 px-3 text-right font-bold text-slate-900">{formatCurrency(item.total_cost)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : activeTab === 'where-used' ? (
+        /* Where-Used Upstream Hierarchy View */
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden p-6 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Where-Used Upstream Dependency Analysis</h3>
+              <p className="text-xs text-slate-500">
+                Identifies every higher-level parent assembly, sub-system, and end-product that incorporates this BOM.
+              </p>
+            </div>
+            <span className="text-xs text-slate-500 font-mono">
+              Total References: <strong>{bomWhereUsed.length}</strong>
+            </span>
+          </div>
+
+          {isWhereUsedLoading ? (
+            <div className="p-8 text-center text-xs text-slate-400">Loading where-used dependencies...</div>
+          ) : bomWhereUsed.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-400">
+              No parent assemblies currently reference this Bill of Materials as a sub-assembly. This is a top-level end product or standalone recipe.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50/50 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="py-2.5 px-3">Parent BOM #</th>
+                    <th className="py-2.5 px-3">Parent Part #</th>
+                    <th className="py-2.5 px-3">Parent Product Name</th>
+                    <th className="py-2.5 px-3 text-center">Usage Quantity</th>
+                    <th className="py-2.5 px-3 text-center">Parent Status</th>
+                    <th className="py-2.5 px-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-mono">
+                  {bomWhereUsed.map((usage: any) => (
+                    <tr key={usage.component_id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-2.5 px-3 font-bold text-slate-900">{usage.parent_bom_number}</td>
+                      <td className="py-2.5 px-3 font-semibold text-primary">{usage.parent_product?.part_number || '—'}</td>
+                      <td className="py-2.5 px-3 font-sans text-slate-700">{usage.parent_product?.name || '—'}</td>
+                      <td className="py-2.5 px-3 text-center font-bold text-slate-800">
+                        {usage.quantity_used} {usage.unit_of_measure}
+                      </td>
+                      <td className="py-2.5 px-3 text-center font-sans">
+                        <StatusBadge status={usage.parent_bom_status} />
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-sans">
+                        <Link
+                          to={`/boms/${usage.parent_bom_id}`}
+                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-semibold"
+                        >
+                          <span>Open Parent BOM</span>
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                        </Link>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
